@@ -230,5 +230,5 @@ class Taskboard:
 
 
 myTaskboard = Taskboard()
-# myTaskboard.new_tasklist()
+myTaskboard.new_tasklist()
 myTaskboard.main_loop()
