@@ -29,7 +29,8 @@ class Taskboard:
                 break
             if user_input == 1:
                 for index in range(0, len(self.tasks)):
-                    print('Task '+str(index)+'\n'+self.tasks[index][0]+'\nStatus: '+self.tasks[index][1]+'\nDescription:\n'+self.tasks[index][2])
+                    print('Task '+str(index+1)+'\n'+self.tasks[index][0]+'\nStatus: '+self.tasks[index][1]+'\nDescription:')
+                    self.word_wrap(self.tasks[index][2], 45)
                     print('Last updated: '+self.tasks[index][3])
                     print('Task ('+str(index+1)+' of '+str(tasks_len)+')')
                     print('Press enter to continue...')
@@ -169,6 +170,18 @@ class Taskboard:
                         self.tasks.append(task)
                 running = False
                 client_socket.close()
+
+    def word_wrap(self, mystr, maxlen):
+        mystr_arr = mystr.split(' ')
+        arr_len = len(mystr_arr)
+        printstr = ''
+        for index in range(0, arr_len):
+            if len(printstr +' '+ mystr_arr[index]) < maxlen:
+                printstr = printstr +' '+ mystr_arr[index]
+            else:
+                print(printstr)
+                printstr = mystr_arr[index]
+        print(printstr)
 
 
     def show_taskboard(self, prompt):
