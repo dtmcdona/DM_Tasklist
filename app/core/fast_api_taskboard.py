@@ -1,14 +1,8 @@
 from fastapi import FastAPI, Path
-from typing import Generic, TypeVar, Optional, List
-from pydantic import BaseModel
+from models import Action
 
 
 app = FastAPI()
-
-
-class Action(BaseModel):
-    name: str
-    code: List[str]
 
 
 actions = [
