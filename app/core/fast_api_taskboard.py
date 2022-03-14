@@ -1,31 +1,16 @@
 from fastapi import FastAPI, Path
-from models import Action
+from models import Action, ActionList, Task, TaskList, Schedule, ScheduleList
 
 
 app = FastAPI()
 
 
-actions = [
-    Action(name='sayhello', code=['Hello user!']),
-    Action(name='init', code=['What tasks would you like to add?']),
-    Action(name='finished', code=['Task finished.'])
-]
-
-tasks = {
-    'startup': [
-        Action(name='sayhello', code=['print(\'Hello user!\')']),
-        Action(name='init', code=['print(\'What tasks would you like to add?\')'])
-    ]
-}
-
-
-schedule = {
-    0: {
-        'name': 'Task1',
-        'numActions': len(tasks['startup']),
-        'tasklist': tasks['startup']
-    }
-}
+action_list_obj = ActionList()
+action_list_obj.load_action_list()
+task_list_obj = TaskList()
+task_list_obj.load_task_list()
+schedule_list_obj = ScheduleList()
+schedule_list_obj.load_schedule_list()
 
 
 @app.get('/')
@@ -33,92 +18,85 @@ def home():
     return {'Data': 'Testing'}
 
 
+@app.get("/get-actions/")
+def get_actions():
+    return action_list_obj.action_list
+
+
+@app.get("/get-action/{action_id}")
+def get_action(action_id: int = Path(None, description="The ID of the action you would like to view.")):
+    return action_list_obj.action_list[action_id]
+
+
+@app.post('/add-action')
+def add_action(new_action: Action):
+    if new_action in action_list_obj.action_list:
+        return {'Data': f'{new_action.name} already exists.'}
+    action_list_obj.add_action(new_action)
+    return {'Data': 'Action added'}
+
+
+@app.put("/update-action/{action_id}")
+def update_action(action_id: int, new_action: Action):
+    if action_id >= len(action_list_obj.action_list) or action_id < 1:
+        return {'Data': 'Invalid ID entered.'}
+    if action_list_obj.action_list[action_id].name == new_action.name and action_list_obj.action_list[action_id].code == new_action.code:
+        return {'Data': 'New data matches old data.'}
+    action_list_obj.action_list[action_id] = new_action
+    return {'Data': 'Action updated'}
+
+
+@app.get("/get-tasks")
+def get_tasks():
+    if len(task_list_obj.task_list) > 0:
+        return task_list_obj.task_list
+    return {'Data': 'Not found'}
+
+
+@app.get("/get-task/{task_name}")
+def get_task(task_name: str = Path(1, description="The name of the task you would like to view.")):
+    for index in task_list_obj.task_list:
+        if index[task_name]:
+            return index
+    return {'Data': 'Not found'}
+
+
+@app.post('/add-tasklist')
+def add_tasklist(task: Task):
+    if task in task_list_obj.task_list:
+        return {'Data': 'Tasklist already exists.'}
+    else:
+        task_list_obj.add_task(task)
+        return {'Data': 'Tasklist has been added to tasks.'}
+
+
+@app.post('/tasks-add-action/{tasklist_id}')
+def tasklist_add_action(tasklist_id: int, new_action: Action):
+    if new_action in action_list_obj.action_list:
+        task_list_obj.action_list[tasklist_id].append(new_action.id)
+        return {'Data': 'Action has been added to the task list.'}
+    else:
+        action_list_obj.add_action(new_action)
+        task_list_obj.action_list[tasklist_id].append(new_action.id)
+        return {'Data': 'New action has been added action and task lists.'}
+
+
 @app.get("/get-schedule/")
 def get_schedule():
-    if len(schedule) > 0:
-        return schedule
+    if len(schedule_list_obj.schedule_list) > 0:
+        return schedule_list_obj.schedule_list
     return {'Data': 'Not found'}
 
 
 @app.get("/get-schedule/{schedule_id}")
 def get_schedule(schedule_id: int = Path(1, description="The ID of the schedule you would like to view.")):
-    return schedule[schedule_id]
+    return schedule_list_obj.schedule_list[schedule_id]
 
 
-@app.get("/get-tasks")
-def get_tasks():
-   if len(tasks) > 0:
-        return tasks
-   return {'Data': 'Not found'}
-
-
-@app.get("/get-task/{task_name}")
-def get_task(task_name: str = Path(1, description="The name of the task you would like to view.")):
-   if tasks[task_name]:
-        return tasks[task_name]
-   return {'Data': 'Not found'}
-
-
-@app.get("/get-actions/")
-def get_actions():
-    return actions
-
-
-@app.get("/get-action/{action_id}")
-def get_action(action_id: int = Path(None, description="The ID of the action you would like to view.")):
-    return actions[action_id]
-
-
-@app.get("/get-task-action-by-name/{task_name}")
-def get_task_action_by_name(task_name: str, action_name: str):
-    for action_index in tasks[task_name]:
-        if action_index.name == action_name:
-            return action_index
-    return {'Data': 'Not found'}
-
-@app.post('/add-action')
-def add_action(newaction: Action):
-    if newaction in actions:
-        return {'Data': f'{newaction.name} already exists.'}
-
-    actions.append(newaction)
-    return actions[-1]
-
-
-@app.post('/add-tasklist')
-def add_tasklist(tasklist_name: str):
-    if tasklist_name in tasks:
-        return {'Data': 'Tasklist already exists.'}
-    else:
-        tasks[tasklist_name] = []
-        return {'Data': 'Tasklist has been added to tasks.'}
-
-
-@app.post('/tasks-add-action/{tasklist_name}')
-def tasklist_add_action(tasklist_name: str, newaction: Action):
-    if newaction in actions:
-        tasks[tasklist_name].append(newaction)
-        return {'Data': 'Action has been added to the task list.'}
-    else:
-        actions.append(newaction)
-        tasks[tasklist_name].append(newaction)
-        return {'Data': 'New action has been added action and task lists.'}
-
-@app.post('/schedule-add-task/{tasklist_name}')
-def tasklist_add_task(tasklist_name: str):
-    if tasklist_name in tasks:
-        schedule[len(schedule)] = tasks[tasklist_name]
+@app.post('/schedule-add-task/{task_list_id}')
+def tasklist_add_task(task_list_id: int):
+    if task_list_id < len(task_list_obj.task_list):
+        schedule_list_obj.schedule_list[len(schedule_list_obj.schedule_list)].task_id_list.append(task_list_id)
         return {'Data': 'Tasklist has been added to the schedule.'}
     else:
         return {'Data': 'Tasklist does not exist.'}
-
-@app.put("/update-action/{action_id}")
-def update_action(action_id: int, newaction: Action):
-    if action_id >= len(actions) or action_id < 0:
-        return {'Data': 'Invalid ID entered.'}
-    if actions[action_id].name == newaction.name and actions[action_id].code == newaction.code:
-        return {'Data': 'New data matches old data.'}
-    else:
-        actions[action_id] = newaction
-        return {'Data': 'Action updated.'}
-

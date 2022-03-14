@@ -1,13 +1,13 @@
 {
       "0": {
-            "id": 1,
+            "id": 0,
             "name": "say_hello",
             "code": [
                   "print(\"Hello user!\")"
             ]
       },
       "1": {
-            "id": 2,
+            "id": 1,
             "name": "test_complete",
             "code": [
                   "print(\"Test complete\")"
