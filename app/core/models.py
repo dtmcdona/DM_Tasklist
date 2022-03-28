@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from pydantic.types import Json
 
 resources_dir = os.path.join(os.getcwd(), 'resources/')
-console_log = True
+console_log = False
 
 
 class Action(BaseModel):
@@ -74,6 +74,7 @@ class ActionList:
             self.save_action_list()
 
     def add_action(self, action: Action):
+        response = {}
         if self.action_list not in [None, {}]:
             names = []
             for key in self.action_list:
@@ -81,13 +82,18 @@ class ActionList:
             if action.name not in names:
                 action.id = len(self.action_list)
                 self.action_list[str(action.id)] = action.dict()
+                response = {'Data': 'Action added'}
             elif console_log:
                 print("Action already exists.")
+            else:
+                response = {'Data': 'Action already exists'}
         else:
             self.action_list = {
                 str(action.id): action.dict()
             }
+            response = {'Data': 'Action added'}
         self.save_action_list()
+        return response
 
     def load_action_list(self):
         self.action_list = {}
@@ -133,6 +139,7 @@ class TaskList:
             self.save_task_list()
 
     def add_task(self, task: Task):
+        response = {}
         if self.task_list not in [None, {}]:
             names = []
             for key in self.task_list:
@@ -140,13 +147,18 @@ class TaskList:
             if task.name not in names:
                 task.id = len(self.task_list)
                 self.task_list[str(task.id)] = task.dict()
+                response = {'Data': 'Task added'}
             elif console_log:
                 print("Task already exists.")
+            else:
+                response = {'Data': 'Task already exists'}
         else:
             self.task_list = {
                 str(task.id): task.dict()
             }
+            response = {'Data': 'Task added'}
         self.save_task_list()
+        return response
 
     def load_task_list(self):
         self.task_list = {}
