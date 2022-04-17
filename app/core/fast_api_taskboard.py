@@ -1,15 +1,16 @@
-from fastapi import FastAPI, Path
-from models import Action, ActionList, Task, TaskList, Schedule, ScheduleList
-
+from fastapi import Body, FastAPI, Path
+from fastapi.responses import JSONResponse
+from . import models
+from . import celery_worker
 
 app = FastAPI()
 
 
-action_list_obj = ActionList()
+action_list_obj = models.ActionList()
 action_list_obj.load_action_list()
-task_list_obj = TaskList()
+task_list_obj = models.TaskList()
 task_list_obj.load_task_list()
-schedule_list_obj = ScheduleList()
+schedule_list_obj = models.ScheduleList()
 schedule_list_obj.load_schedule_list()
 
 
@@ -33,13 +34,13 @@ def get_action(action_id: int = Path(None, description="The ID of the action you
 
 
 @app.post('/add-action')
-def add_action(new_action: Action):
+def add_action(new_action: models.Action):
     response = action_list_obj.add_action(new_action)
     return response
 
 
 @app.put("/update-action/{action_id}")
-def update_action(action_id: int, new_action: Action):
+def update_action(action_id: int, new_action: models.Action):
     if action_id >= len(action_list_obj.action_list) or action_id < 0:
         return {'Data': 'Invalid ID entered.'}
     if action_list_obj.action_list[str(action_id)].get('name') == new_action.name and \
@@ -66,13 +67,13 @@ def get_task(task_name: str = Path(1, description="The name of the task you woul
 
 
 @app.post('/add-task')
-def add_task(task: Task):
+def add_task(task: models.Task):
     response = task_list_obj.add_task(task)
     return response
 
 
 @app.post('/tasks-add-action/{tasklist_name}')
-def task_add_action(task_name: str, new_action: Action):
+def task_add_action(task_name: str, new_action: models.Action):
     action_response = action_list_obj.add_action(new_action)
     new_action_id = None
     if action_list_obj.action_list not in [None, {}]:
@@ -119,3 +120,14 @@ def schedule_add_task(schedule_name: str, task_name: str):
                 schedule_list_obj.schedule_list[key]['task_id_list'].append(task_id)
                 return {'Data': 'Added task to schedule.'}
     return {'Data': 'Schedule does not exist.'}
+
+
+@app.post('/execute_action/{action_id}')
+def execute_action(action_id: int = Path(None, description="The ID of the action you would like to run.")):
+    if action_list_obj.action_list.get(str(action_id)):
+        action = action_list_obj.action_list.get(str(action_id))
+        task = celery_worker.run_action.delay(action["code"])
+        response = {'Data': f'{task}'}
+    else:
+        response = {'Data': 'Action not found.'}
+    return response

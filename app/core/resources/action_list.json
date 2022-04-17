@@ -3,14 +3,14 @@
             "id": 0,
             "name": "say_hello",
             "code": [
-                  "print(\"Hello user!\")"
+                  "say_hello(\"user!\")"
             ]
       },
       "1": {
             "id": 1,
             "name": "test_complete",
             "code": [
-                  "print(\"Test complete\")"
+                  "say_hello(\"dave!\")"
             ]
       }
 }

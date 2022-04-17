@@ -4,10 +4,34 @@ services:
   app:
     build:
       context: .
+      dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - 8002:8002
+    restart: always
     volumes:
       - ./app:/app
     command: >
-      sh -c "cd ~/app/core 
-             uvicorn fast_api_taskboard:app --reload"
+      sh -c "uvicorn core.fast_api_taskboard:app --host 0.0.0.0 --port 8002 --reload"
+
+  broker:
+    hostname: broker
+    container_name: broker
+    image: rabbitmq:3
+    ports:
+      - 5672:5672
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+
+  celery_worker:
+    hostname: celery_worker
+    container_name: celery_worker
+    build: .
+    command: celery -A app.core.celery_worker.celery worker --loglevel=info
+    volumes:
+      - .:/app
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+    depends_on:
+      - app
+      - broker

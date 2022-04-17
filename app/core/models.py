@@ -3,11 +3,11 @@ import json
 import os
 import sys
 from os.path import exists
-from typing import Generic, TypeVar, Optional, List
+from typing import Optional, List
 from pydantic import BaseModel
 from pydantic.types import Json
 
-resources_dir = os.path.join(os.getcwd(), 'resources/')
+resources_dir = os.path.join(os.getcwd(), 'core/resources/')
 console_log = False
 
 
