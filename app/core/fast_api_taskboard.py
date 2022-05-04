@@ -1,10 +1,21 @@
 from fastapi import Body, FastAPI, Path
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from . import models
 from . import celery_worker
 
 app = FastAPI()
 
+origins = [
+    "http://localhost:3000"
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 action_list_obj = models.ActionList()
 action_list_obj.load_action_list()
