@@ -1,5 +1,6 @@
 """IMPORTANT: This version can only run in docker containers with a virtual display or a normal computer"""
 import base64
+import pathlib
 import time
 
 import cv2
@@ -30,7 +31,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 action_list_obj = models.ActionList()
 action_list_obj.load_action_list()
 task_list_obj = models.TaskList()
@@ -41,7 +41,7 @@ schedule_list_obj.load_schedule_list()
 
 @app.get('/')
 def home():
-    return {'Data': 'Testing'}
+    return {'data': 'Testing'}
 
 
 @app.get("/get-actions/")
@@ -54,7 +54,7 @@ def get_action(action_id: int = Path(None, description="The ID of the action you
     if action_list_obj.action_list.get(str(action_id)):
         response = action_list_obj.action_list.get(str(action_id))
     else:
-        response = {'Data': 'Action not found.'}
+        response = {'data': 'Action not found.'}
     return response
 
 
@@ -67,19 +67,19 @@ def add_action(new_action: models.Action):
 @app.put("/update-action/{action_id}")
 def update_action(action_id: int, new_action: models.Action):
     if action_id >= len(action_list_obj.action_list) or action_id < 0:
-        return {'Data': 'Invalid ID entered.'}
+        return {'data': 'Invalid ID entered.'}
     if action_list_obj.action_list[str(action_id)].get('name') == new_action.name and \
             action_list_obj.action_list[str(action_id)].get('code') == new_action.code:
-        return {'Data': 'New data matches old data.'}
+        return {'data': 'New data matches old data.'}
     action_list_obj.action_list[str(action_id)] = new_action
-    return {'Data': 'Action updated'}
+    return {'data': 'Action updated'}
 
 
 @app.get("/get-tasks")
 def get_tasks():
     if len(task_list_obj.task_list) > 0:
         return task_list_obj.task_list
-    return {'Data': 'Not found'}
+    return {'data': 'Not found'}
 
 
 @app.get("/get-task/{task_name}")
@@ -88,7 +88,7 @@ def get_task(task_name: str = Path(1, description="The name of the task you woul
         for key in task_list_obj.task_list:
             if task_name == task_list_obj.task_list[key].get('name'):
                 return task_list_obj.task_list[key]
-    return {'Data': 'Task not found.'}
+    return {'data': 'Task not found.'}
 
 
 @app.post('/add-task')
@@ -110,15 +110,15 @@ def task_add_action(task_name: str, new_action: models.Action):
         for key in task_list_obj.task_list:
             if task_name == task_list_obj.task_list[key].get('name'):
                 task_list_obj.task_list[key]["action_id_list"].append(new_action_id)
-                return {'Data': 'Action has been added to the task list.'}
-    return {'Data': f'Task {task_name} does not exist.'}
+                return {'data': 'Action has been added to the task list.'}
+    return {'data': f'Task {task_name} does not exist.'}
 
 
 @app.get("/get-schedules/")
 def get_schedules():
     if len(schedule_list_obj.schedule_list) > 0:
         return schedule_list_obj.schedule_list
-    return {'Data': 'Not found'}
+    return {'data': 'Not found'}
 
 
 @app.get("/get-schedule/{schedule_name}")
@@ -127,7 +127,7 @@ def get_schedule(schedule_name: str = Path(1, description="The ID of the schedul
         for key in schedule_list_obj.schedule_list:
             if schedule_name == schedule_list_obj.schedule_list[key].get('name'):
                 return schedule_list_obj.schedule_list[key]
-    return {'Data': 'Not found'}
+    return {'data': 'Not found'}
 
 
 @app.post('/schedule-add-task/{schedule_name}/{task_list_name}')
@@ -138,13 +138,13 @@ def schedule_add_task(schedule_name: str, task_name: str):
             if task_name == task_list_obj.task_list[key].get('name'):
                 task_id = task_list_obj.task_list[key].get('id')
     if task_id is None:
-        return {'Data': 'Task does not exist.'}
+        return {'data': 'Task does not exist.'}
     if schedule_list_obj.schedule_list not in [None, {}]:
         for key in schedule_list_obj.schedule_list:
             if schedule_name == schedule_list_obj.schedule_list[key].get('name'):
                 schedule_list_obj.schedule_list[key]['task_id_list'].append(task_id)
-                return {'Data': 'Added task to schedule.'}
-    return {'Data': 'Schedule does not exist.'}
+                return {'data': 'Added task to schedule.'}
+    return {'data': 'Schedule does not exist.'}
 
 
 @app.post('/execute_celery_action/{action_id}')
@@ -152,16 +152,16 @@ def execute_celery_action(action_id: int = Path(None, description="The ID of the
     if action_list_obj.action_list.get(str(action_id)):
         action = action_list_obj.action_list.get(str(action_id))
         task = celery_worker.run_action.delay(action["code"])
-        response = {'Data': f'{task}'}
+        response = {'data': f'{task}'}
     else:
-        response = {'Data': 'Action not found.'}
+        response = {'data': 'Action not found.'}
     return response
 
 
 @app.post('/execute_action/{action_id}')
 def execute_action(action_id: int = Path(None, description="The ID of the action you would like to run.")):
     """This function only works with Fast API running on your local machine since docker containers run headless"""
-    response = {'Data': 'Action not found'}
+    response = {'data': 'Action not found'}
     if action_list_obj.action_list.get(str(action_id)):
         actions = action_list_obj.action_list.get(str(action_id))
         print(actions)
@@ -180,27 +180,33 @@ def execute_action(action_id: int = Path(None, description="The ID of the action
                     y = int(params[1])
                     if action == 'click':
                         click(x=x, y=y)
-                        response = {'Data': f'Mouse clicked: ({x}, {y})'}
+                        response = {'data': f'Mouse clicked: ({x}, {y})'}
                     else:
                         moveTo(x=x, y=y)
-                        response = {'Data': f'Mouse moved to: ({x}, {y})'}
+                        response = {'data': f'Mouse moved to: ({x}, {y})'}
             elif action_str.startswith('keypress'):
                 param = action_str.lstrip('keypress(\"')
                 param = param.rstrip('\")')
                 keyDown(param)
                 time.sleep(1)
                 keyUp(param)
-                response = {'Data': f'Key pressed {param}'}
+                response = {'data': f'Key pressed {param}'}
     return response
 
 
-@app.get('/screen-shot/')
+@app.get('/screenshot/')
 def screen_shot():
     """This function only works with Fast API running on your local machine since docker containers run headless"""
-    resources_dir = os.path.join(os.getcwd(), 'resources/')
-    screenshot_path = os.path.join(resources_dir, 'screenshot.png')
+    timestamp = round(time.time() * 1000)
+    base_dir = pathlib.Path('.').absolute()
+    resources_dir = os.path.join(base_dir, 'resources', 'screenshot')
+    if not os.path.isdir(resources_dir):
+        resources_dir = os.path.join(base_dir, 'core', 'resources', 'screenshot')
+    screenshot_path = os.path.join(resources_dir, f'screenshot_{timestamp}.png')
     screenshot(screenshot_path)
     img = cv2.imread(screenshot_path)
     png_img = cv2.imencode('.png', img)
     b64_string = base64.b64encode(png_img[1]).decode('utf-8')
-    return {'Data': b64_string}
+    if os.path.exists(screenshot_path):
+        os.remove(os.path.join(resources_dir, screenshot_path))
+    return {'data': b64_string}
