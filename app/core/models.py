@@ -3,11 +3,16 @@ import json
 import os
 import sys
 from os.path import exists
-from typing import Optional, List
+from pathlib import Path
 from pydantic import BaseModel
 from pydantic.types import Json
+from typing import Optional, List
 
-resources_dir = os.path.join(os.getcwd(), 'core/resources/')
+
+base_dir = Path('.').absolute()
+resources_dir = os.path.join(base_dir, 'resources')
+if not os.path.isdir(resources_dir):
+    resources_dir = os.path.join(base_dir, 'core', 'resources')
 console_log = False
 
 
@@ -300,11 +305,11 @@ class TestModels:
             print("Test complete: "+func_name)
 
 
-def main() -> None:
-    """Main function"""
+def test_models() -> None:
+    """Test function"""
     test_obj = TestModels()
     test_obj.test_crud_model()
 
 
 if __name__ == "__main__":
-    main()
+    test_models()

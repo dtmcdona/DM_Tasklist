@@ -1,5 +1,13 @@
+"""IMPORTANT: This version can only run in docker containers with a virtual display or a normal computer"""
+import base64
+import time
+
+import cv2
+import os
+from PIL import Image
 from fastapi import Body, FastAPI, Path
 from fastapi.middleware.cors import CORSMiddleware
+from pyautogui import moveTo, click, keyUp, keyDown, screenshot
 try:
      from . import models
 except:
@@ -8,6 +16,7 @@ try:
      from . import celery_worker
 except:
      import celery_worker
+
 
 app = FastAPI()
 
@@ -147,3 +156,51 @@ def execute_celery_action(action_id: int = Path(None, description="The ID of the
     else:
         response = {'Data': 'Action not found.'}
     return response
+
+
+@app.post('/execute_action/{action_id}')
+def execute_action(action_id: int = Path(None, description="The ID of the action you would like to run.")):
+    """This function only works with Fast API running on your local machine since docker containers run headless"""
+    response = {'Data': 'Action not found'}
+    if action_list_obj.action_list.get(str(action_id)):
+        actions = action_list_obj.action_list.get(str(action_id))
+        print(actions)
+        for action_str in actions.get('code'):
+            if action_str.startswith('click') or action_str.startswith('moveTo'):
+                action = 'click'
+                if action_str.startswith('click'):
+                    params = action_str.lstrip('click(x=')
+                else:
+                    action = 'moveTo'
+                    params = action_str.lstrip('moveTo(x=')
+                params = params.rstrip(')')
+                params = params.split(', y=')
+                if len(params) == 2:
+                    x = int(params[0])
+                    y = int(params[1])
+                    if action == 'click':
+                        click(x=x, y=y)
+                        response = {'Data': f'Mouse clicked: ({x}, {y})'}
+                    else:
+                        moveTo(x=x, y=y)
+                        response = {'Data': f'Mouse moved to: ({x}, {y})'}
+            elif action_str.startswith('keypress'):
+                param = action_str.lstrip('keypress(\"')
+                param = param.rstrip('\")')
+                keyDown(param)
+                time.sleep(1)
+                keyUp(param)
+                response = {'Data': f'Key pressed {param}'}
+    return response
+
+
+@app.get('/screen-shot/')
+def screen_shot():
+    """This function only works with Fast API running on your local machine since docker containers run headless"""
+    resources_dir = os.path.join(os.getcwd(), 'resources/')
+    screenshot_path = os.path.join(resources_dir, 'screenshot.png')
+    screenshot(screenshot_path)
+    img = cv2.imread(screenshot_path)
+    png_img = cv2.imencode('.png', img)
+    b64_string = base64.b64encode(png_img[1]).decode('utf-8')
+    return {'Data': b64_string}

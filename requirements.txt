@@ -30,6 +30,7 @@ mypy-extensions==0.4.3
 numpy==1.22.3
 opencv-python==4.5.5.64
 pathspec==0.8.1
+Pillow==9.1.0
 prometheus-client==0.11.0
 promise==2.3
 prompt-toolkit==3.0.19
