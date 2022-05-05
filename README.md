@@ -1,4 +1,4 @@
-# Tasklist
+# DM_Tasklist
 Simple task list that you could use for a todo list in a console or in uvicorn running fastapi endpoints.
 
 To run this project via uvicorn you will need to install the following:
