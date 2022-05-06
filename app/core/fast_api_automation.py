@@ -17,6 +17,10 @@ try:
      from . import celery_worker
 except:
      import celery_worker
+try:
+     from . import random_mouse
+except:
+     import random_mouse
 
 
 app = FastAPI()
@@ -169,21 +173,44 @@ def execute_action(action_id: int = Path(None, description="The ID of the action
             if action_str.startswith('click') or action_str.startswith('moveTo'):
                 action = 'click'
                 if action_str.startswith('click'):
-                    params = action_str.lstrip('click(x=')
+                    params = action_str.lstrip('click(')
                 else:
                     action = 'moveTo'
-                    params = action_str.lstrip('moveTo(x=')
+                    params = action_str.lstrip('moveTo(')
                 params = params.rstrip(')')
-                params = params.split(', y=')
+                params = params.split(', ')
+                params[0] = params[0].lstrip('x=')
+                params[1] = params[1].lstrip('y=')
+                x = int(params[0])
+                y = int(params[1])
+
                 if len(params) == 2:
-                    x = int(params[0])
-                    y = int(params[1])
                     if action == 'click':
                         click(x=x, y=y)
                         response = {'data': f'Mouse clicked: ({x}, {y})'}
                     else:
                         moveTo(x=x, y=y)
                         response = {'data': f'Mouse moved to: ({x}, {y})'}
+                elif 'random_path=true' in params:
+                    random_mouse.random_move(x=x, y=y)
+                    path_index = params.index('random_path=true')
+                    params.pop(path_index)
+                # moveTo() cannot have random_delay and random_range
+                if len(params) == 3 and params[2].startswith('random_range='):
+                    params[2] = params[2].lstrip('random_range=')
+                    rand_range = int(params[2])
+                    random_mouse.random_click(x=x, y=y, rand_range=rand_range)
+                    response = {'data': f'Mouse clicked: ({x}, {y})'}
+                elif len(params) == 3 and params[2].startswith('random_range='):
+                    params[2] = params[2].lstrip('random_delay=')
+                    delay_duration = float(params[2])
+                    random_mouse.random_click(x=x, y=y, rand_range=0, delay_duration=delay_duration)
+                elif len(params) == 4:
+                    params[2] = params[2].lstrip('random_range=')
+                    rand_range = int(params[2])
+                    params[3] = params[3].lstrip('random_delay=')
+                    delay_duration = float(params[3])
+                    random_mouse.random_click(x=x, y=y, rand_range=rand_range, delay_duration=delay_duration)
             elif action_str.startswith('keypress'):
                 param = action_str.lstrip('keypress(\"')
                 param = param.rstrip('\")')

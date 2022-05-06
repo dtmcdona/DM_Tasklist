@@ -26,5 +26,12 @@
             "code": [
                   "moveTo(x=0, y=0)"
             ]
-      }
+      },
+      "4": {
+            "id": 4,
+            "name": "2022-05-06T00:28:26.700Z",
+            "code": [
+                  "click(x=87, y=37, random_path=true, random_range=4, random_delay=0.5)"
+            ]
+      },
 }
