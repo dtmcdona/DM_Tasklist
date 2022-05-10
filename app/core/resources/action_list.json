@@ -33,5 +33,5 @@
             "code": [
                   "click(x=87, y=37, random_path=true, random_range=4, random_delay=0.5)"
             ]
-      },
+      }
 }

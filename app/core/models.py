@@ -87,16 +87,19 @@ class ActionList:
             if action.name not in names:
                 action.id = len(self.action_list)
                 self.action_list[str(action.id)] = action.dict()
-                response = {'Data': 'Action added'}
+                action_obj = {"id": action.id, "name": action.name, "code": action.code}
+                response = action_obj
             elif console_log:
                 print("Action already exists.")
             else:
                 response = {'Data': 'Action already exists'}
         else:
+            action.id = 0
             self.action_list = {
-                str(action.id): action.dict()
+                "0": action.dict()
             }
-            response = {'Data': 'Action added'}
+            action_obj = {"id": action.id, "name": action.name, "code": action.code}
+            response = action_obj
         self.save_action_list()
         return response
 
