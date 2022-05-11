@@ -122,6 +122,9 @@ class ActionList:
                 print("Saved action list.")
 
     def delete_action(self, action_id: int):
+        if action_id >= len(self.action_list) or action_id < 0:
+            response = {'Data': f'Action does not exist'}
+            return response
         new_action_list = {}
         index = 0
         for key in self.action_list:
@@ -135,6 +138,8 @@ class ActionList:
         if console_log:
             print(f"Deleted action id: {action_id}")
         self.save_action_list()
+        response = {'Data': f'Deleted action id: {action_id}'}
+        return response
 
 
 class TaskList:

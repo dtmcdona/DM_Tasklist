@@ -79,6 +79,12 @@ def update_action(action_id: int, new_action: models.Action):
     return {'data': 'Action updated'}
 
 
+@app.post('/delete-action/{action_id}')
+def delete_action(action_id: int):
+    response = action_list_obj.delete_action(action_id)
+    return response
+
+
 @app.get("/get-tasks")
 def get_tasks():
     if len(task_list_obj.task_list) > 0:
