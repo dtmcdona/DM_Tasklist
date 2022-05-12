@@ -8,7 +8,7 @@ import os
 from PIL import Image
 from fastapi import Body, FastAPI, Path
 from fastapi.middleware.cors import CORSMiddleware
-from pyautogui import moveTo, click, keyUp, keyDown, screenshot
+from pyautogui import moveTo, click, keyUp, keyDown, screenshot, size, press, KEYBOARD_KEYS
 try:
      from . import models
 except:
@@ -157,7 +157,7 @@ def schedule_add_task(schedule_name: str, task_name: str):
     return {'data': 'Schedule does not exist.'}
 
 
-@app.post('/execute_celery_action/{action_id}')
+@app.post('/execute-celery-action/{action_id}')
 def execute_celery_action(action_id: int = Path(None, description="The ID of the action you would like to run.")):
     if action_list_obj.action_list.get(str(action_id)):
         action = action_list_obj.action_list.get(str(action_id))
@@ -168,7 +168,7 @@ def execute_celery_action(action_id: int = Path(None, description="The ID of the
     return response
 
 
-@app.post('/execute_action/{action_id}')
+@app.post('/execute-action/{action_id}')
 def execute_action(action_id: int = Path(None, description="The ID of the action you would like to run.")):
     """This function only works with Fast API running on your local machine since docker containers run headless"""
     response = {'data': 'Action not found'}
@@ -243,3 +243,36 @@ def screen_shot():
     if os.path.exists(screenshot_path):
         os.remove(os.path.join(resources_dir, screenshot_path))
     return {'data': b64_string}
+
+
+@app.get('/move-mouse/{x}/{y}')
+def move_mouse(x: int, y: int):
+    screen_width, screen_height = size()
+    response = {'data': 'Invalid input'}
+    if x <= screen_width and x >= 0 and y <= screen_height and y >= 0:
+        moveTo(x, y)
+        response = {'data': f'Moved mouse to ({x},{y})'}
+
+    return response
+
+
+@app.get('/mouse-click/{x}/{y}')
+def mouse_click(x: int, y: int):
+    screen_width, screen_height = size()
+    response = {'data': 'Invalid input'}
+    if x <= screen_width and x >= 0 and y <= screen_height and y >= 0:
+        click(x, y)
+        response = {'data': f'Moved mouse to ({x},{y})'}
+
+    return response
+
+
+@app.get('/keypress/{key_name}')
+def keypress(key_name: str):
+    response = {'data': 'Invalid input'}
+    valid_input = KEYBOARD_KEYS
+    if key_name in valid_input:
+        press(key_name)
+        response = {'data': f'Key pressed {key_name}'}
+
+    return response

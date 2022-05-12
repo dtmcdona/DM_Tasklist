@@ -144,7 +144,7 @@ def schedule_add_task(schedule_name: str, task_name: str):
     return {'Data': 'Schedule does not exist.'}
 
 
-@app.post('/execute_celery_action/{action_id}')
+@app.post('/execute-celery-action/{action_id}')
 def execute_celery_action(action_id: int = Path(None, description="The ID of the action you would like to run.")):
     if action_list_obj.action_list.get(str(action_id)):
         action = action_list_obj.action_list.get(str(action_id))
