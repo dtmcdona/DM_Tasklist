@@ -247,7 +247,7 @@ def screen_shot():
     return {'data': b64_string}
 
 
-@app.get('/screen-snip/{x1}/{y1}/{x2}/{y2}')
+@app.get('/screen-snip/{x1}/{y1}/{x2}/{y2}/')
 def screen_snip(x1: int, y1: int, x2: int, y2: int):
     """This function is used to capture a section of the screen and store in resources/images as png and json files"""
     base_dir = pathlib.Path('.').absolute()
