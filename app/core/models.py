@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 import sys
+import uuid
 from os.path import exists
 from pathlib import Path
 from pydantic import BaseModel
@@ -17,12 +18,14 @@ console_log = False
 
 
 class Action(BaseModel):
+    """Actions represent the smallest process of a task"""
     id: Optional[int]
     name: str
     code: List[str]
 
 
 class Task(BaseModel):
+    """Tasks represent a collection of actions that complete a goal"""
     id: Optional[int]
     name: str
     task_dependency_id: Optional[int]
@@ -30,23 +33,48 @@ class Task(BaseModel):
 
 
 class Schedule(BaseModel):
+    """Schedule is a series of tasks to run over a given timeframe"""
     id: Optional[int]
     name: str
     schedule_dependency_id: Optional[int]
     task_id_list: List[int]
 
 
+class Conditional(BaseModel):
+    """Conditionals represent the logic to check for any requirements needed to run an action or task"""
+    id: Optional[str] = uuid.uuid4()
+    condition: str
+    sleep_if_false: Optional[bool] = False
+    sleep_duration: Optional[float] = 0
+    sleep_retries: Optional[int] = 0
+    success_result: Json = {"data": "Success"}
+    failure_result: Json = {"data": "Failure"}
+    timestamp: str = datetime.datetime.now().isoformat()
+
+
+class Image(BaseModel):
+    """Represents any picture image that needs to be stored via a 64 bit encoding"""
+    id: Optional[str] = uuid.uuid4()
+    width: Optional[int] = 1920
+    height: Optional[int] = 1080
+    timestamp: Optional[str] = datetime.datetime.now().isoformat()
+    base64str: str
+
+
 class JsonData(BaseModel):
+    """Abstract data type for storing unique data"""
     id: int
     data: Json
 
 
 class Source(BaseModel):
+    """Represents an abstract data source stored in the file system"""
     id: int
     uri: str
 
 
 class CapturedData(BaseModel):
+    """Represents any form of data that can be captured as relevant data for an action or task"""
     id: int
     type: str
     source_id: int
@@ -55,6 +83,7 @@ class CapturedData(BaseModel):
 
 
 class TaskRank(BaseModel):
+    """Used to determine how efficient it completes a goal"""
     task_rank: int
     task_id: int
     delta_vars: List[float]
@@ -62,6 +91,7 @@ class TaskRank(BaseModel):
 
 
 class MousePosition(BaseModel):
+    """Might be used in the future to track relative mouse x and y coords for different resolutions"""
     action_id: int
     x: int
     y: int
@@ -69,7 +99,51 @@ class MousePosition(BaseModel):
     screen_height: int
 
 
+class ImageResource:
+    """Collection of images with store, load and delete functions"""
+    def __init__(self):
+        self.image_dir = os.path.join(resources_dir, 'images')
+
+    def store_image(self, image: Image):
+        file_name = f"{image.id}.json"
+        file_path = os.path.join(self.image_dir, file_name)
+        response = {"data": f"Saved image: {file_name}"}
+        with open(file_path, "w", encoding='utf-8') as file:
+            json.dump(image.dict(), file, indent=6)
+            if console_log:
+                print(f"Saved image: {file_name}")
+        return response
+
+    def load_image(self, image_id: str):
+        file_name = f"{image_id}.json"
+        file_path = os.path.join(resources_dir, file_name)
+        image = {}
+        if exists(file_path):
+            with open(file_path, 'r', encoding='utf-8') as file:
+                image = json.loads(file.read())
+                if console_log:
+                    print(image)
+                    print(f"Loaded image: {file_name}")
+        elif console_log:
+            print('File does not exist: ' + file_path)
+        return image
+
+    def delete_image(self, image_id: str):
+        file_name = f"{image_id}.json"
+        file_path = os.path.join(resources_dir, file_name)
+        response = {"data": f"File does not exist: {file_path}"}
+        if exists(file_path):
+            os.remove(os.path.join(resources_dir, file_path))
+            response = {"data": f"Deleted image: {file_name}"}
+            if console_log:
+                print(f"Deleted image: {file_name}")
+        elif console_log:
+            print(f"File does not exist: {file_path}")
+        return response
+
+
 class ActionList:
+    """Collection of all actions entered into the system"""
     def __init__(self):
         self.file_path = os.path.join(resources_dir, 'action_list.json')
         self.action_list = {}
@@ -143,6 +217,7 @@ class ActionList:
 
 
 class TaskList:
+    """Collection of all tasks entered into the system"""
     def __init__(self):
         self.task_list = []
         self.file_path = os.path.join(resources_dir, 'task_list.json')
@@ -208,6 +283,7 @@ class TaskList:
 
 
 class ScheduleList:
+    """Collection of all schedules entered into the system"""
     def __init__(self):
         self.schedule_list = []
         self.file_path = os.path.join(resources_dir, 'schedule_list.json')
@@ -267,6 +343,7 @@ class ScheduleList:
 
 
 class TestModels:
+    """Used to test actions, tasks, and schedule lists"""
     def __init__(self):
         self.action_list_obj = ActionList()
         self.task_list_obj = TaskList()

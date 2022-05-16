@@ -2,6 +2,7 @@
 import base64
 import pathlib
 import time
+import uuid
 
 import cv2
 import os
@@ -41,6 +42,7 @@ task_list_obj = models.TaskList()
 task_list_obj.load_task_list()
 schedule_list_obj = models.ScheduleList()
 schedule_list_obj.load_schedule_list()
+image_resource = models.ImageResource()
 
 
 @app.get('/')
@@ -243,6 +245,38 @@ def screen_shot():
     if os.path.exists(screenshot_path):
         os.remove(os.path.join(resources_dir, screenshot_path))
     return {'data': b64_string}
+
+
+@app.get('/screen-snip/{x1}/{y1}/{x2}/{y2}')
+def screen_snip(x1: int, y1: int, x2: int, y2: int):
+    """This function is used to capture a section of the screen and store in resources/images as png and json files"""
+    base_dir = pathlib.Path('.').absolute()
+    image_dir = os.path.join(base_dir, 'resources', 'images')
+    if not os.path.isdir(image_dir):
+        image_dir = os.path.join(base_dir, 'core', 'resources', 'images')
+    image_id = uuid.uuid4()
+    image_path = os.path.join(image_dir, f'{image_id}.png')
+    screenshot(image_path)
+    img = cv2.imread(image_path)
+    cv2.imwrite(image_path, img[y1:y2, x1:x2, :])
+    snip_img = cv2.imread(image_path)
+    snip_png_img = cv2.imencode('.png', snip_img)
+    b64_string = base64.b64encode(snip_png_img[1]).decode('utf-8')
+    width = snip_img.shape[0]
+    height = snip_img.shape[1]
+    image_json = {
+        "id": f"{image_id}",
+        "width": width,
+        "height": height,
+        "base64str": f"{b64_string}"
+    }
+    image_obj = models.Image(**image_json)
+    print(image_obj)
+    response = image_resource.store_image(image_obj)
+    if response.get("data").startswith("Saved"):
+        return image_obj
+    else:
+        return response
 
 
 @app.get('/move-mouse/{x}/{y}')
