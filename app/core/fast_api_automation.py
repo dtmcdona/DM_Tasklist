@@ -247,16 +247,19 @@ def screen_shot():
     return {'data': b64_string}
 
 
-@app.get('/screen-snip/{x1}/{y1}/{x2}/{y2}/')
-def screen_snip(x1: int, y1: int, x2: int, y2: int):
+@app.post('/screen-snip/{x1}/{y1}/{x2}/{y2}/')
+def screen_snip(x1: int, y1: int, x2: int, y2: int, image: models.Image):
     """This function is used to capture a section of the screen and store in resources/images as png and json files"""
     base_dir = pathlib.Path('.').absolute()
     image_dir = os.path.join(base_dir, 'resources', 'images')
     if not os.path.isdir(image_dir):
         image_dir = os.path.join(base_dir, 'core', 'resources', 'images')
+    base64str = image.base64str
+    decoded64str = base64.b64decode(base64str)
     image_id = uuid.uuid4()
     image_path = os.path.join(image_dir, f'{image_id}.png')
-    screenshot(image_path)
+    with open(image_path, 'wb') as f:
+        f.write(decoded64str)
     img = cv2.imread(image_path)
     cv2.imwrite(image_path, img[y1:y2, x1:x2, :])
     snip_img = cv2.imread(image_path)
