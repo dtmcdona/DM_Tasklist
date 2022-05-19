@@ -194,6 +194,7 @@ def execute_action(action_id: int = Path(None, description="The ID of the action
                     delay = float(params[0])
                     time.sleep(delay)
                     params.pop(0)
+                    continue
                 elif action_str.startswith('click('):
                     params = action_str.lstrip('click(')
                 elif action_str.startswith('move_to('):
