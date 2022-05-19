@@ -184,7 +184,17 @@ def execute_action(action_id: int = Path(None, description="The ID of the action
         for action_str in actions.get('code'):
             if action_str.startswith('click') or action_str.startswith('moveTo'):
                 action = 'click'
-                if action_str.startswith('click('):
+                if action_str.startswith('delay('):
+                    params = action_str.lstrip('delay(')
+                    params = params.rstrip(')')
+                    if ', ' in params:
+                        params = params.split(', ')
+                    else:
+                        params = [params]
+                    delay = float(params[0])
+                    time.sleep(delay)
+                    params.pop(0)
+                elif action_str.startswith('click('):
                     params = action_str.lstrip('click(')
                 elif action_str.startswith('move_to('):
                     action = 'move_to'
