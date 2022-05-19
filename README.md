@@ -3,8 +3,9 @@ This project is a basic RPA system that uses Fast API endpoints as a backend for
 sequences and it streams screen data to the React.js frontend project (DM_React)
 
 To run this project via uvicorn you will need to install the following:
-1. Create a new virtual environment and install requirements.txt
-2. Run fast_api_taskboard in a docker container or run fast_api_automation on host
+1. Navigate to app/core/resources and make these directories: "images" and "screenshot"
+2. Create a new virtual environment and install requirements.txt
+3. Run fast_api_taskboard in a docker container or run fast_api_automation on host
 
 Note: In the future I will modify the docker container with a virtual xvfb display once most
 of the core features are completed
