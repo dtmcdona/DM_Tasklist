@@ -58,6 +58,11 @@ class Image(BaseModel):
     width: Optional[int] = 1920
     height: Optional[int] = 1080
     timestamp: Optional[str] = datetime.datetime.now().isoformat()
+    is_static_position: Optional[bool] = True
+    x1: Optional[int] = 0
+    y1: Optional[int] = 0
+    x2: Optional[int] = 1920
+    y2: Optional[int] = 1920
     base64str: str
 
 

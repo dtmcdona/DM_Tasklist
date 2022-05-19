@@ -22,6 +22,10 @@ try:
      from . import random_mouse
 except:
      import random_mouse
+try:
+     from . import screen_reader
+except:
+     import screen_reader
 
 
 app = FastAPI()
@@ -81,7 +85,7 @@ def update_action(action_id: int, new_action: models.Action):
     return {'data': 'Action updated'}
 
 
-@app.post('/delete-action/{action_id}')
+@app.get('/delete-action/{action_id}')
 def delete_action(action_id: int):
     response = action_list_obj.delete_action(action_id)
     return response
@@ -180,44 +184,86 @@ def execute_action(action_id: int = Path(None, description="The ID of the action
         for action_str in actions.get('code'):
             if action_str.startswith('click') or action_str.startswith('moveTo'):
                 action = 'click'
-                if action_str.startswith('click'):
+                if action_str.startswith('click('):
                     params = action_str.lstrip('click(')
-                else:
-                    action = 'moveTo'
+                elif action_str.startswith('move_to('):
+                    action = 'move_to'
                     params = action_str.lstrip('moveTo(')
+                elif action_str.startswith('click_image('):
+                    action = 'click_image'
+                    params = action_str.lstrip('click_image(')
+                    print(params)
+                elif action_str.startswith('click_image('):
+                    action = 'move_to_image'
+                    params = action_str.lstrip('move_to_image(')
                 params = params.rstrip(')')
-                params = params.split(', ')
-                params[0] = params[0].lstrip('x=')
-                params[1] = params[1].lstrip('y=')
-                x = int(params[0])
-                y = int(params[1])
+                if ', ' in params:
+                    params = params.split(', ')
+                else:
+                    params = [params]
+                if action == 'click' or action == 'move_to':
+                    params[0] = params[0].lstrip('x=')
+                    params[1] = params[1].lstrip('y=')
+                    x = int(params[0])
+                    y = int(params[1])
+                    params.pop(0)
+                    params.pop(1)
+                elif action == 'click_image' or action == 'move_to_image':
+                    """Parameters will be as follows: 
+                    We look for a needle in a haystack with screen_reader function with percent similarity
+                    needle_image=file_name: str, 
+                    haystack_image=file_name: Optional[str],
+                    percent_similarity: Optional[float], 
+                    screen_reader.image_search returns x,y coordinates and then action is converted to normal action"""
+                    params[0] = params[0].split('=')
+                    needle_file_name = str(params[0][1])
+                    params.pop(0)
+                    haystack_file_name = ""
+                    percent_similarity = .9
+                    if len(params) > 0 and params[0].startswith('haystack_image='):
+                        params[0] = params[0].split('=')
+                        haystack_file_name = str(params[0][1])
+                        params.pop(0)
+                    if len(params) > 0 and params[0].startswith('percent_similarity='):
+                        params[0] = params[0].split('=')
+                        percent_similarity = float(params[0][1])
+                        params.pop(0)
+                    
+                    x, y = screen_reader.image_search(needle_file_name=needle_file_name,
+                                                      haystack_file_name=haystack_file_name,
+                                                      percent_similarity=percent_similarity)
+                    if x == -1 or y == -1:
+                        break
+                    # Action can now be processed as a normal action since we have the image (x, y) coordinates
+                    action = 'click' if action == 'click_image' else 'move_to'
 
-                if len(params) == 2:
-                    if action == 'click':
-                        click(x=x, y=y)
-                        response = {'data': f'Mouse clicked: ({x}, {y})'}
-                    else:
-                        moveTo(x=x, y=y)
-                        response = {'data': f'Mouse moved to: ({x}, {y})'}
-                elif 'random_path=true' in params:
+                if 'random_path=true' in params:
                     random_mouse.random_move(x=x, y=y)
                     path_index = params.index('random_path=true')
                     params.pop(path_index)
+
+                if len(params) == 0:
+                    if action == 'click':
+                        click(x=x, y=y)
+                        response = {'data': f'Mouse clicked: ({x}, {y})'}
+                    elif action == 'move_to':
+                        moveTo(x=x, y=y)
+                        response = {'data': f'Mouse moved to: ({x}, {y})'}
                 # moveTo() cannot have random_delay and random_range
-                if len(params) == 3 and params[2].startswith('random_range='):
-                    params[2] = params[2].lstrip('random_range=')
-                    rand_range = int(params[2])
+                if len(params) == 1 and params[0].startswith('random_range='):
+                    params[0] = params[0].lstrip('random_range=')
+                    rand_range = int(params[0])
                     random_mouse.random_click(x=x, y=y, rand_range=rand_range)
                     response = {'data': f'Mouse clicked: ({x}, {y})'}
-                elif len(params) == 3 and params[2].startswith('random_range='):
-                    params[2] = params[2].lstrip('random_delay=')
-                    delay_duration = float(params[2])
+                elif len(params) == 1 and params[0].startswith('random_range='):
+                    params[0] = params[0].lstrip('random_delay=')
+                    delay_duration = float(params[0])
                     random_mouse.random_click(x=x, y=y, rand_range=0, delay_duration=delay_duration)
-                elif len(params) == 4:
-                    params[2] = params[2].lstrip('random_range=')
-                    rand_range = int(params[2])
-                    params[3] = params[3].lstrip('random_delay=')
-                    delay_duration = float(params[3])
+                elif len(params) == 2:
+                    params[0] = params[0].lstrip('random_range=')
+                    rand_range = int(params[0])
+                    params[1] = params[1].lstrip('random_delay=')
+                    delay_duration = float(params[1])
                     random_mouse.random_click(x=x, y=y, rand_range=rand_range, delay_duration=delay_duration)
             elif action_str.startswith('keypress'):
                 param = action_str.lstrip('keypress(\"')
@@ -269,6 +315,10 @@ def screen_snip(x1: int, y1: int, x2: int, y2: int, image: models.Image):
     height = snip_img.shape[1]
     image_json = {
         "id": f"{image_id}",
+        "x1": x1,
+        "y1": y1,
+        "x2": x2,
+        "y2": y2,
         "width": width,
         "height": height,
         "base64str": f"{b64_string}"

@@ -5,30 +5,31 @@ import random
 
 def random_move(x: int, y: int):
     # Choose a random amount of segments to move to x, y
-    random_steps = random.randrange(3, 9)
+    random_steps = random.randrange(6, 18)
     # Loop through all the random moves of mouse to get closer to x, y
-    while random_steps < 12:
+    while random_steps < 24:
         current_mouse_x, current_mouse_y = pyautogui.position()
         # Choose a random destination to move the mouse closer to x, y
         if x < current_mouse_x:
-            step_distance_x = int((current_mouse_x - x) / (12 - random_steps))
-            random_destination_x = random.randrange(current_mouse_x, current_mouse_x - step_distance_x)
+            step_distance_x = int((current_mouse_x - x) / (24 - random_steps))
+            random_destination_x = random.randrange(current_mouse_x - step_distance_x, current_mouse_x)
         else:
-            step_distance_x = int((x - current_mouse_x) / (12 - random_steps))
+            step_distance_x = int((x - current_mouse_x) / (24 - random_steps))
             random_destination_x = random.randrange(current_mouse_x, current_mouse_x + step_distance_x)
         if y < current_mouse_y:
-            step_distance_y = int((current_mouse_y - y) / (12 - random_steps))
-            random_destination_y = random.randrange(current_mouse_y, current_mouse_y - step_distance_y)
+            step_distance_y = int((current_mouse_y - y) / (24 - random_steps))
+            random_destination_y = random.randrange(current_mouse_y - step_distance_y, current_mouse_y)
         else:
-            step_distance_y = int((x - current_mouse_y) / (12 - random_steps))
+            step_distance_y = int((x - current_mouse_y) / (24 - random_steps))
             random_destination_y = random.randrange(current_mouse_y, current_mouse_y + step_distance_y)
 
-        random_move_duration = (random.randrange(0, 500, 6)) / 1000
+        random_move_duration = (random.randrange(0, 250, 6)) / 1000
         pyautogui.moveTo(random_destination_x, random_destination_y, random_move_duration)
         random_steps += 1
 
     # Finish by moving mouse to x, y
-    pyautogui.moveTo(x, y)
+    random_move_duration = (random.randrange(0, 500, 6)) / 1000
+    pyautogui.moveTo(x, y, random_move_duration)
 
 
 def random_click(x: int, y: int, rand_range: int = 0, delay_duration: float = 0, mouse_button: str = 'left'):
