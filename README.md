@@ -1,9 +1,13 @@
 # DM_Tasklist
-Simple task list that you could use for a todo list in a console or in uvicorn running fastapi endpoints.
+This project is a basic RPA system that uses Fast API endpoints as a backend for storing action 
+sequences and it streams screen data to the React.js frontend project (DM_React)
 
 To run this project via uvicorn you will need to install the following:
-1. ```pip install fastapi```
-2. ```pip install uvicorn```
+1. Create a new virtual environment and install requirements.txt
+2. Run fast_api_taskboard in a docker container or run fast_api_automation on host
+
+Note: In the future I will modify the docker container with a virtual xvfb display once most
+of the core features are completed
 
 Next you can run the app with uvicorn with the following command:
 ```angular2html
