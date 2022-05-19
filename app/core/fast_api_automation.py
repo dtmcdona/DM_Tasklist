@@ -182,20 +182,20 @@ def execute_action(action_id: int = Path(None, description="The ID of the action
         actions = action_list_obj.action_list.get(str(action_id))
         print(actions)
         for action_str in actions.get('code'):
-            if action_str.startswith('click') or action_str.startswith('moveTo'):
+            if action_str.startswith('delay('):
+                params = action_str.lstrip('delay(')
+                params = params.rstrip(')')
+                if ', ' in params:
+                    params = params.split(', ')
+                else:
+                    params = [params]
+                delay = float(params[0])
+                time.sleep(delay)
+                params.pop(0)
+                continue
+            elif action_str.startswith('click') or action_str.startswith('moveTo'):
                 action = 'click'
-                if action_str.startswith('delay('):
-                    params = action_str.lstrip('delay(')
-                    params = params.rstrip(')')
-                    if ', ' in params:
-                        params = params.split(', ')
-                    else:
-                        params = [params]
-                    delay = float(params[0])
-                    time.sleep(delay)
-                    params.pop(0)
-                    continue
-                elif action_str.startswith('click('):
+                if action_str.startswith('click('):
                     params = action_str.lstrip('click(')
                 elif action_str.startswith('move_to('):
                     action = 'move_to'
@@ -218,7 +218,7 @@ def execute_action(action_id: int = Path(None, description="The ID of the action
                     x = int(params[0])
                     y = int(params[1])
                     params.pop(0)
-                    params.pop(1)
+                    params.pop(0)
                 elif action == 'click_image' or action == 'move_to_image':
                     """Parameters will be as follows: 
                     We look for a needle in a haystack with screen_reader function with percent similarity
