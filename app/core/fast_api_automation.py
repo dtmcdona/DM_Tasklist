@@ -130,6 +130,19 @@ def task_add_action(task_name: str, new_action: models.Action):
     return {'data': f'Task {task_name} does not exist.'}
 
 
+@app.get("/execute-task/{task_id}")
+def execute_task(task_id: int):
+    task = task_list_obj.task_list[str(task_id)]
+    action_id_list = [] if task.get('action_id_list') in [None, []] else task["action_id_list"]
+    for action_id in action_id_list:
+        execute_action(action_id)
+    if action_id_list in [None, []]:
+        response = {'data': 'Task not found'}
+    else:
+        response = {'data': 'Task complete'}
+    return response
+
+
 @app.get("/get-schedules/")
 def get_schedules():
     if len(schedule_list_obj.schedule_list) > 0:

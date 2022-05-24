@@ -240,18 +240,25 @@ class TaskList:
             if task.name not in names:
                 task.id = len(self.task_list)
                 self.task_list[str(task.id)] = task.dict()
-                response = {'Data': 'Task added'}
-            elif console_log:
-                print("Task already exists.")
+                response = task
+                self.save_task_list()
             else:
-                response = {'Data': 'Task already exists'}
+                index = self.task_list.index(task.name)
+                task.id = index
+                response = self.update_task(index, task)
         else:
+            task.id = 0
             self.task_list = {
                 str(task.id): task.dict()
             }
             response = {'Data': 'Task added'}
-        self.save_task_list()
+            self.save_task_list()
         return response
+
+    def update_task(self, index: int, task: Task):
+        self.task_list[index] = task
+        self.save_task_list()
+        return task
 
     def load_task_list(self):
         self.task_list = {}
