@@ -40,6 +40,27 @@ class Schedule(BaseModel):
     task_id_list: List[int]
 
 
+class ScreenObject(BaseModel):
+    """Screen objects represent text, buttons, or GUI elements"""
+    id: Optional[str] = uuid.uuid4()
+    type: Optional[str] = "text"
+    action_id: Optional[int] = None
+    timestamp: Optional[str] = datetime.datetime.now().isoformat()
+    text: str = ""
+    x1: int
+    y1: int
+    x2: int
+    y2: int
+
+
+class ScreenData(BaseModel):
+    """Screen data is a collection for all the screen objects found and the screenshot is saved as a base 64 image"""
+    id: Optional[str] = uuid.uuid4()
+    timestamp: Optional[str] = datetime.datetime.now().isoformat()
+    base64str: str
+    screen_obj_ids: List[str]
+
+
 class Conditional(BaseModel):
     """Conditionals represent the logic to check for any requirements needed to run an action or task"""
     id: Optional[str] = uuid.uuid4()
@@ -104,6 +125,59 @@ class MousePosition(BaseModel):
     screen_height: int
 
 
+class ScreenDataResource:
+    """Collection of screen data with store, load and delete functions"""
+    def __init__(self):
+        self.screen_data_dir = os.path.join(resources_dir, 'screen_data')
+
+    def store_screen_object(self, screen_object: ScreenObject):
+        file_name = f"{screen_object.id}.json"
+        file_path = os.path.join(self.screen_data_dir, file_name)
+        response = {"data": f"Saved screen data: {file_name}"}
+        with open(file_path, "w", encoding='utf-8') as file:
+            json.dump(screen_object.dict(), file, indent=6)
+            if console_log:
+                print(f"Saved screen data: {file_name}")
+        return response
+
+    def store_screen_data(self, screen_data: ScreenData):
+        file_name = f"{screen_data.id}.json"
+        file_path = os.path.join(self.screen_data_dir, file_name)
+        response = {"data": f"Saved screen data: {file_name}"}
+        with open(file_path, "w", encoding='utf-8') as file:
+            json.dump(screen_data.dict(), file, indent=6)
+            if console_log:
+                print(f"Saved screen data: {file_name}")
+        return response
+
+    def load_screen_data(self, screen_data_id: str):
+        file_name = f"{screen_data_id}.json"
+        file_path = os.path.join(self.screen_data_dir, file_name)
+        screen_data = {}
+        if exists(file_path):
+            with open(file_path, 'r', encoding='utf-8') as file:
+                screen_data = json.loads(file.read())
+                if console_log:
+                    print(screen_data)
+                    print(f"Loaded screen data: {file_name}")
+        elif console_log:
+            print('File does not exist: ' + file_path)
+        return screen_data
+
+    def delete_screen_data(self, screen_data_id: str):
+        file_name = f"{screen_data_id}.json"
+        file_path = os.path.join(self.screen_data_dir, file_name)
+        response = {"data": f"File does not exist: {file_path}"}
+        if exists(file_path):
+            os.remove(os.path.join(self.screen_data_dir, file_path))
+            response = {"data": f"Deleted screen data: {file_name}"}
+            if console_log:
+                print(f"Deleted screen data: {file_name}")
+        elif console_log:
+            print(f"File does not exist: {file_path}")
+        return response
+
+
 class ImageResource:
     """Collection of images with store, load and delete functions"""
     def __init__(self):
@@ -121,7 +195,7 @@ class ImageResource:
 
     def load_image(self, image_id: str):
         file_name = f"{image_id}.json"
-        file_path = os.path.join(resources_dir, file_name)
+        file_path = os.path.join(self.image_dir, file_name)
         image = {}
         if exists(file_path):
             with open(file_path, 'r', encoding='utf-8') as file:
@@ -135,10 +209,10 @@ class ImageResource:
 
     def delete_image(self, image_id: str):
         file_name = f"{image_id}.json"
-        file_path = os.path.join(resources_dir, file_name)
+        file_path = os.path.join(self.image_dir, file_name)
         response = {"data": f"File does not exist: {file_path}"}
         if exists(file_path):
-            os.remove(os.path.join(resources_dir, file_path))
+            os.remove(os.path.join(self.image_dir, file_path))
             response = {"data": f"Deleted image: {file_name}"}
             if console_log:
                 print(f"Deleted image: {file_name}")

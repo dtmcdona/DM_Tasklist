@@ -1,12 +1,15 @@
 """IMPORTANT: This version can only run in docker containers with a virtual display or a normal computer"""
 import base64
+import datetime
 import pathlib
 import time
 import uuid
 
 import cv2
+import enchant
 import os
 from PIL import Image
+import pytesseract
 from fastapi import Body, FastAPI, Path
 from fastapi.middleware.cors import CORSMiddleware
 from pyautogui import moveTo, click, keyUp, keyDown, screenshot, size, press, KEYBOARD_KEYS
@@ -47,6 +50,8 @@ task_list_obj.load_task_list()
 schedule_list_obj = models.ScheduleList()
 schedule_list_obj.load_schedule_list()
 image_resource = models.ImageResource()
+screen_data_resource = models.ScreenDataResource()
+screen_width, screen_height = size()
 
 
 @app.get('/')
@@ -130,7 +135,8 @@ def task_add_action(task_name: str, new_action: models.Action):
     return {'data': f'Task {task_name} does not exist.'}
 
 
-@app.get("/execute-task/{task_id}")
+@app.get("/execute-task/{task_id"
+         "}")
 def execute_task(task_id: int):
     task = task_list_obj.task_list[str(task_id)]
     action_id_list = [] if task.get('action_id_list') in [None, []] else task["action_id_list"]
@@ -313,7 +319,7 @@ def screen_shot():
     png_img = cv2.imencode('.png', img)
     b64_string = base64.b64encode(png_img[1]).decode('utf-8')
     if os.path.exists(screenshot_path):
-        os.remove(os.path.join(resources_dir, screenshot_path))
+        os.remove(screenshot_path)
     return {'data': b64_string}
 
 
@@ -387,3 +393,82 @@ def keypress(key_name: str):
         response = {'data': f'Key pressed {key_name}'}
 
     return response
+
+@app.get('/capture-screen-data/{x1}/{y1}/{x2}/{y2}/{action_id}')
+def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
+    response = {'data': 'Screen data not captured'}
+    screenshot_id = str(uuid.uuid4())
+    base_dir = pathlib.Path('.').absolute()
+    resources_dir = os.path.join(base_dir, 'resources', 'screenshot')
+    if not os.path.isdir(resources_dir):
+        resources_dir = os.path.join(base_dir, 'core', 'resources', 'screenshot')
+    screenshot_path = os.path.join(resources_dir, f'{screenshot_id}.png')
+    screenshot(screenshot_path)
+    img = cv2.imread(screenshot_path)
+    width = x2 - x1
+    height = y2 - y1
+    if width != screen_width and height != screen_height:
+        cv2.imwrite(screenshot_path, img[y1:y2, x1:x2, :])
+        img = cv2.imread(screenshot_path)
+    png_img = cv2.imencode('.png', img)
+    b64_string = base64.b64encode(png_img[1]).decode('utf-8')
+    (h, w) = img.shape[:2]
+    img = cv2.resize(img, (w * 5, h * 5))
+    gry = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    thr = cv2.threshold(gry, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+    cv2.imwrite(screenshot_path, thr)
+    # There might be some case where inverting the image gives better results
+    # screenshot_path = os.path.join(resources_dir, f'invert_{screenshot_id}.png')
+    # inverted_thr = cv2.bitwise_not(thr)
+    # cv2.imwrite(screenshot_path, inverted_thr)
+    # inverted_img_data = pytesseract.image_to_data(thr)
+    img_data = pytesseract.image_to_data(thr)
+    timestamp = datetime.datetime.now().isoformat()
+    if os.path.exists(screenshot_path):
+        os.remove(screenshot_path)
+
+    count = 0
+    screen_obj_ids = []
+    english_dict = enchant.Dict("en_US")
+    for index, word_data in enumerate(img_data.splitlines()):
+        if index == 0:
+            continue
+        word = word_data.split()
+        if len(word) == 12:
+            if word[11].isnumeric() or english_dict.check(word[11]):
+                word_id = str(uuid.uuid4())
+                screen_obj_ids.append(word_id)
+                word_x1, word_y1, word_width, word_height = int(word[6]), int(word[7]), int(word[8]), int(word[9])
+                text = word[11]
+                word_action_id = None if action_id >= len(action_list_obj.action_list) or action_id < 0 else action_id
+                data_type = "text" if action_id >= len(action_list_obj.action_list) or action_id < 0 else "button"
+                screen_object_json = {
+                    "id": f"{word_id}",
+                    "type": data_type,
+                    "action_id": word_action_id,
+                    "timestamp": timestamp,
+                    "text": text,
+                    "x1": x1+word_x1,
+                    "y1": y1+word_y1,
+                    "x2": x1+word_x1+word_width,
+                    "y2": y1+word_y1+word_height
+                }
+                screen_object = models.ScreenObject(**screen_object_json)
+                print(screen_object)
+                response = screen_data_resource.store_screen_object(screen_object)
+                if response.get("data").startswith("Saved"):
+                    count = count + 1
+                else:
+                    print(response)
+    screen_data_json = {
+        "id": screenshot_id,
+        "timestamp": timestamp,
+        "base64str": b64_string,
+        "screen_obj_ids": screen_obj_ids
+    }
+    screen_data = models.ScreenData(**screen_data_json)
+    res = screen_data_resource.store_screen_data(screen_data)
+    if count > 0:
+        response = {'data': 'Screen data captured'}
+    return response
+
