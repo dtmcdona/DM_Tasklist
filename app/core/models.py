@@ -317,7 +317,7 @@ class TaskList:
                 response = task
                 self.save_task_list()
             else:
-                index = self.task_list.index(task.name)
+                index = names.index(task.name)
                 task.id = index
                 response = self.update_task(index, task)
         else:
@@ -330,7 +330,7 @@ class TaskList:
         return response
 
     def update_task(self, index: int, task: Task):
-        self.task_list[index] = task
+        self.task_list[str(index)] = task.dict()
         self.save_task_list()
         return task
 
