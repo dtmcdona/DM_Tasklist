@@ -80,7 +80,7 @@ def add_action(new_action: models.Action):
     return response
 
 
-@app.put("/update-action/{action_id}")
+@app.post("/update-action/{action_id}")
 def update_action(action_id: int, new_action: models.Action):
     if action_id >= len(action_list_obj.action_list) or action_id < 0:
         return {'data': 'Invalid ID entered.'}
