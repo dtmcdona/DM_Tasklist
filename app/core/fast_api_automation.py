@@ -2,6 +2,7 @@
 import base64
 import datetime
 import pathlib
+import random
 import time
 import uuid
 
@@ -83,10 +84,7 @@ def add_action(new_action: models.Action):
 def update_action(action_id: int, new_action: models.Action):
     if action_id >= len(action_list_obj.action_list) or action_id < 0:
         return {'data': 'Invalid ID entered.'}
-    if action_list_obj.action_list[str(action_id)].get('name') == new_action.name and \
-            action_list_obj.action_list[str(action_id)].get('code') == new_action.code:
-        return {'data': 'New data matches old data.'}
-    action_list_obj.action_list[str(action_id)] = new_action
+    action_list_obj.update_action(action_id, new_action)
     return {'data': 'Action updated'}
 
 
@@ -196,112 +194,85 @@ def execute_celery_action(action_id: int = Path(None, description="The ID of the
 @app.post('/execute-action/{action_id}')
 def execute_action(action_id: int = Path(None, description="The ID of the action you would like to run.")):
     """This function only works with Fast API running on your local machine since docker containers run headless"""
-    response = {'data': 'Action not found'}
+    response = {'data': f'Error with action_id:{action_id}'}
     if action_list_obj.action_list.get(str(action_id)):
-        actions = action_list_obj.action_list.get(str(action_id))
-        print(actions)
-        for action_str in actions.get('code'):
-            if action_str.startswith('delay('):
-                params = action_str.lstrip('delay(')
-                params = params.rstrip(')')
-                if ', ' in params:
-                    params = params.split(', ')
+        action = action_list_obj.action_list.get(str(action_id))
+        if action.get("time_delay") not in [0.0, None]:
+            delay = float(action["time_delay"])
+            time.sleep(delay)
+        if action.get("function") not in ["", None]:
+            x = -1
+            y = -1
+            random_range = 0 if action.get("random_range") in [0, None] else action["random_range"]
+            random_delay = 0.0 if action.get("random_delay") in [0.0, None] else float(action["random_delay"])
+            if action.get("images") not in [[], None]:
+                needle_file_name = action["images"][0]
+                if action.get("images")[1] not in ["", None]:
+                    haystack_file_name = action["images"][1]
                 else:
-                    params = [params]
-                delay = float(params[0])
-                time.sleep(delay)
-                params.pop(0)
-                continue
-            elif action_str.startswith('click') or action_str.startswith('moveTo'):
-                action = 'click'
-                if action_str.startswith('click('):
-                    params = action_str.lstrip('click(')
-                elif action_str.startswith('move_to('):
-                    action = 'move_to'
-                    params = action_str.lstrip('moveTo(')
-                elif action_str.startswith('click_image('):
-                    action = 'click_image'
-                    params = action_str.lstrip('click_image(')
-                    print(params)
-                elif action_str.startswith('click_image('):
-                    action = 'move_to_image'
-                    params = action_str.lstrip('move_to_image(')
-                params = params.rstrip(')')
-                if ', ' in params:
-                    params = params.split(', ')
-                else:
-                    params = [params]
-                if action == 'click' or action == 'move_to':
-                    params[0] = params[0].lstrip('x=')
-                    params[1] = params[1].lstrip('y=')
-                    x = int(params[0])
-                    y = int(params[1])
-                    params.pop(0)
-                    params.pop(0)
-                elif action == 'click_image' or action == 'move_to_image':
-                    """Parameters will be as follows: 
-                    We look for a needle in a haystack with screen_reader function with percent similarity
-                    needle_image=file_name: str, 
-                    haystack_image=file_name: Optional[str],
-                    percent_similarity: Optional[float], 
-                    screen_reader.image_search returns x,y coordinates and then action is converted to normal action"""
-                    params[0] = params[0].split('=')
-                    needle_file_name = str(params[0][1])
-                    params.pop(0)
                     haystack_file_name = ""
-                    percent_similarity = .9
-                    if len(params) > 0 and params[0].startswith('haystack_image='):
-                        params[0] = params[0].split('=')
-                        haystack_file_name = str(params[0][1])
-                        params.pop(0)
-                    if len(params) > 0 and params[0].startswith('percent_similarity='):
-                        params[0] = params[0].split('=')
-                        percent_similarity = float(params[0][1])
-                        params.pop(0)
-                    
-                    x, y = screen_reader.image_search(needle_file_name=needle_file_name,
-                                                      haystack_file_name=haystack_file_name,
-                                                      percent_similarity=percent_similarity)
-                    if x == -1 or y == -1:
-                        break
-                    # Action can now be processed as a normal action since we have the image (x, y) coordinates
-                    action = 'click' if action == 'click_image' else 'move_to'
-
-                if 'random_path=true' in params:
+                percent_similarity = .9
+                x, y = screen_reader.image_search(needle_file_name=needle_file_name,
+                                                  haystack_file_name=haystack_file_name,
+                                                  percent_similarity=percent_similarity)
+            if action.get("x2") not in [-1, None] and action.get("y2") not in [-1, None]:
+                if action.get("x1") in [-1, None] or action.get("y1") in [-1, None]:
+                    return response
+                x1 = action["x1"]
+                y1 = action["y1"]
+                x2 = action["x2"]
+                y2 = action["y2"]
+                x_range = x2 - x1
+                y_range = y2 - y1
+                if action.get("random_range") not in [0, None]:
+                    # This fixes any errors with random mouse click range with region click
+                    if x_range > random_range*2:
+                        x1 = x1 + random_range
+                        x2 = x2 - random_range
+                    elif x_range < random_range and x_range > 4:
+                        random_range = 1
+                        x1 = x1 + random_range
+                        x2 = x2 - random_range
+                    else:
+                        random_range = 0
+                    if y_range > random_range*2:
+                        y1 = y1 + random_range
+                        y2 = y2 - random_range
+                    elif y_range < random_range and y_range > 4:
+                        random_range = 1
+                        y1 = y1 + random_range
+                        y2 = y2 - random_range
+                    else:
+                        random_range = 0
+                x = random.randrange(x1, x2)
+                y = random.randrange(y1, y2)
+            elif action.get("x1") not in [-1, None] and action.get("y1") not in [-1, None]:
+                x = action["x1"]
+                y = action["y1"]
+            if action["function"] == 'click' or action["function"] == 'click_image':
+                if x == -1 or y == -1:
+                    return response
+                if action.get("random_path") not in [False, None]:
                     random_mouse.random_move(x=x, y=y)
-                    path_index = params.index('random_path=true')
-                    params.pop(path_index)
-
-                if len(params) == 0:
-                    if action == 'click':
-                        click(x=x, y=y)
-                        response = {'data': f'Mouse clicked: ({x}, {y})'}
-                    elif action == 'move_to':
-                        moveTo(x=x, y=y)
-                        response = {'data': f'Mouse moved to: ({x}, {y})'}
-                # moveTo() cannot have random_delay and random_range
-                if len(params) == 1 and params[0].startswith('random_range='):
-                    params[0] = params[0].lstrip('random_range=')
-                    rand_range = int(params[0])
-                    random_mouse.random_click(x=x, y=y, rand_range=rand_range)
-                    response = {'data': f'Mouse clicked: ({x}, {y})'}
-                elif len(params) == 1 and params[0].startswith('random_range='):
-                    params[0] = params[0].lstrip('random_delay=')
-                    delay_duration = float(params[0])
-                    random_mouse.random_click(x=x, y=y, rand_range=0, delay_duration=delay_duration)
-                elif len(params) == 2:
-                    params[0] = params[0].lstrip('random_range=')
-                    rand_range = int(params[0])
-                    params[1] = params[1].lstrip('random_delay=')
-                    delay_duration = float(params[1])
-                    random_mouse.random_click(x=x, y=y, rand_range=rand_range, delay_duration=delay_duration)
-            elif action_str.startswith('keypress'):
-                param = action_str.lstrip('keypress(\"')
-                param = param.rstrip('\")')
-                keyDown(param)
+                if action.get("random_range") not in [0, None] or action.get("random_delay") not in [0.0, None]:
+                    random_mouse.random_click(x=x, y=y, rand_range=random_range, delay_duration=random_delay)
+                else:
+                    click(x,y)
+                response = {'data': f'Mouse clicked: ({x}, {y})'}
+            elif action["function"] == 'move_to' or action["function"] == 'move_to_image':
+                if x == -1 or y == -1:
+                    return response
+                if action.get("random_path") not in [False, None]:
+                    random_mouse.random_move(x=x, y=y)
+                else:
+                    moveTo(x=x, y=y)
+                response = {'data': f'Mouse moved to: ({x}, {y})'}
+            elif action["function"] == 'key_pressed' and action.get("key_pressed") not in ["", None]:
+                action_key = action["key_pressed"]
+                keyDown(action_key)
                 time.sleep(1)
-                keyUp(param)
-                response = {'data': f'Key pressed {param}'}
+                keyUp(action_key)
+                response = {'data': f'Key pressed {action_key}'}
     return response
 
 

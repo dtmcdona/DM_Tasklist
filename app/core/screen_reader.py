@@ -19,7 +19,7 @@ def image_search(needle_file_name: str, haystack_file_name: str = "", percent_si
     needle_file_path = os.path.join(image_dir, needle_file_name)
     needle = cv2.imread(needle_file_path, cv2.IMREAD_UNCHANGED)
     grayscale_needle = cv2.cvtColor(needle, cv2.COLOR_BGR2GRAY)
-    if haystack_file_name == "":
+    if haystack_file_name in ["", None]:
         image_id = uuid.uuid4()
         haystack_file_path = os.path.join(image_dir, f'{image_id}.png')
         pyautogui.screenshot(haystack_file_path)
@@ -42,14 +42,14 @@ def image_search(needle_file_name: str, haystack_file_name: str = "", percent_si
     if os.path.exists(haystack_file_path):
         os.remove(haystack_file_path)
     if len(xloc) > 0:
-        print("There are {0} total matches in the haystack.".format(len(xloc)))
+        # print("There are {0} total matches in the haystack.".format(len(xloc)))
         for (x, y) in zip(xloc, yloc):
             # Twice to ensure singles are kept after picking unique cases
             matches.append([int(x), int(y), int(width), int(height)])
             matches.append([int(x), int(y), int(width), int(height)])
         # Grouping function
         matches, weights = cv2.groupRectangles(matches, 1, 0.2)
-        print("There are {0} unique matches in the haystack.".format(len(matches)))
+        # print("There are {0} unique matches in the haystack.".format(len(matches)))
         # Assuming the first match was a good match
         if len(matches) > 0:
             center_x = matches[0][0] + width / 2
