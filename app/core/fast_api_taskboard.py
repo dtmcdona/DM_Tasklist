@@ -58,12 +58,9 @@ def add_action(new_action: models.Action):
 @app.put("/update-action/{action_id}")
 def update_action(action_id: int, new_action: models.Action):
     if action_id >= len(action_list_obj.action_list) or action_id < 0:
-        return {'Data': 'Invalid ID entered.'}
-    if action_list_obj.action_list[str(action_id)].get('name') == new_action.name and \
-            action_list_obj.action_list[str(action_id)].get('code') == new_action.code:
-        return {'Data': 'New data matches old data.'}
-    action_list_obj.action_list[str(action_id)] = new_action
-    return {'Data': 'Action updated'}
+        return {'data': 'Invalid ID entered.'}
+    action_list_obj.update_action(action_id, new_action)
+    return {'data': 'Action updated'}
 
 
 @app.post('/delete-action/{action_id}')

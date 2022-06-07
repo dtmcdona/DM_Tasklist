@@ -21,7 +21,26 @@ class Action(BaseModel):
     """Actions represent the smallest process of a task"""
     id: Optional[int]
     name: str
-    code: List[str]
+    function: str
+    x1: Optional[int] = None
+    x2: Optional[int] = None
+    y1: Optional[int] = None
+    y2: Optional[int] = None
+    images: Optional[List[str]] = []
+    image_conditions: Optional[List[str]] = []
+    variables: Optional[List[str]] = []
+    variable_condition: Optional[List[str]] = []
+    created_at: Optional[str] = datetime.datetime.now().isoformat()
+    time_delay: Optional[float] = 0.0
+    key_pressed: Optional[str] = None
+    true_case: Optional[str] = "conditions_true"
+    false_case: Optional[str] = "conditions_false"
+    error_case: Optional[str] = "error"
+    repeat: Optional[bool] = False
+    num_repeats: Optional[int] = 0
+    random_path: Optional[bool] = False
+    random_range: Optional[int] = 0
+    random_delay: Optional[float] = 0.0
 
 
 class Task(BaseModel):
@@ -240,21 +259,25 @@ class ActionList:
             if action.name not in names:
                 action.id = len(self.action_list)
                 self.action_list[str(action.id)] = action.dict()
-                action_obj = {"id": action.id, "name": action.name, "code": action.code}
-                response = action_obj
-            elif console_log:
-                print("Action already exists.")
+                self.save_action_list()
+                response = action
             else:
-                response = {'Data': 'Action already exists'}
+                index = names.index(action.name)
+                action.id = index
+                response = self.update_action(index, action)
         else:
             action.id = 0
             self.action_list = {
                 "0": action.dict()
             }
-            action_obj = {"id": action.id, "name": action.name, "code": action.code}
-            response = action_obj
-        self.save_action_list()
+            response = action
+            self.save_action_list()
         return response
+
+    def update_action(self, index: int, action: Action):
+        self.action_list[str(index)] = action.dict()
+        self.save_action_list()
+        return action
 
     def load_action_list(self):
         self.action_list = {}
@@ -325,7 +348,7 @@ class TaskList:
             self.task_list = {
                 str(task.id): task.dict()
             }
-            response = {'Data': 'Task added'}
+            response = task
             self.save_task_list()
         return response
 
@@ -438,13 +461,17 @@ class TestModels:
     def test_crud_model(self):
         test_action1 = {
             'id': 0,
-            'name': 'say_hello',
-            'code': ['print("Hello user!")'],
+            'name': 'test_move_to',
+            'function': 'move_to',
+            'x1': 0,
+            'y1': 0
         }
         test_action2 = {
             'id': 1,
-            'name': 'test_complete',
-            'code': ['print("Test complete")'],
+            'name': 'test_click',
+            'function': 'click',
+            'x1': 0,
+            'y1': 0
         }
         test_task = {
             'id': 0,
