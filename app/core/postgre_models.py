@@ -175,6 +175,24 @@ def get_tasks():
     return tasks
 
 
+def save_tasks_to_json():
+    df = get_tasks()
+    df_json = df.to_dict()
+    print(df_json)
+    task_list_obj = models.TaskList()
+    new_task_list = {}
+    for index in df.index:
+        ids = df_json.get("action_id_list").get(index).split(', ') if df_json.get("action_id_list").get(index) else []
+        new_task_list[index] = {
+            "id": index,
+            "name": df_json.get("name").get(index),
+            "task_dependency_id": df_json.get("task_dependency_id").get(index),
+            "action_id_list": ids,
+        }
+    task_list_obj.task_list = new_task_list
+    task_list_obj.save_task_list()
+
+
 def insert_task(new_task: models.Task):
     action_id_list = new_task.get('action_id_list')
     action_id_list_str = ', '.join(str(x) for x in action_id_list)
@@ -194,6 +212,23 @@ def get_schedules():
     query = session.query(Schedule).statement
     schedules = pd.read_sql(query, db)
     return schedules
+
+
+def save_schedules_to_json():
+    df = get_schedules()
+    df_json = df.to_dict()
+    schedule_list_obj = models.ScheduleList()
+    new_schedule_list = {}
+    for index in df.index:
+        ids = df_json.get("task_id_list").get(index).split(', ') if df_json.get("task_id_list").get(index) else []
+        new_schedule_list[index] = {
+            "id": index,
+            "name": df_json.get("name").get(index),
+            "schedule_dependency_id": df_json.get("schedule_dependency_id").get(index),
+            "task_id_list": ids,
+        }
+    schedule_list_obj.schedule_list = new_schedule_list
+    schedule_list_obj.save_schedule_list()
 
 
 def insert_schedule(new_schedule: models.Schedule):

@@ -2,7 +2,7 @@
       "0": {
             "id": 0,
             "name": "test_tasks",
-            "task_dependency_id": 0,
+            "task_dependency_id": null,
             "action_id_list": [
                   1,
                   2

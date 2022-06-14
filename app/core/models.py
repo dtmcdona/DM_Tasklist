@@ -47,7 +47,7 @@ class Task(BaseModel):
     """Tasks represent a collection of actions that complete a goal"""
     id: Optional[int]
     name: str
-    task_dependency_id: Optional[int]
+    task_dependency_id: Optional[int] = None
     action_id_list: List[int] = []
 
 
@@ -55,8 +55,8 @@ class Schedule(BaseModel):
     """Schedule is a series of tasks to run over a given timeframe"""
     id: Optional[int]
     name: str
-    schedule_dependency_id: Optional[int]
-    task_id_list: List[int]
+    schedule_dependency_id: Optional[int] = None
+    task_id_list: List[int] = []
 
 
 class ScreenObject(BaseModel):
