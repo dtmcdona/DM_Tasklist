@@ -1,6 +1,7 @@
 """IMPORTANT: This version can only run in docker containers with a virtual display or a normal computer"""
 import base64
 import datetime
+import logging
 import pathlib
 import random
 import time
@@ -9,6 +10,8 @@ import uuid
 import cv2
 import enchant
 import os
+
+import pyautogui as pyautogui
 from PIL import Image
 import pytesseract
 from fastapi import Body, FastAPI, Path
@@ -53,16 +56,22 @@ schedule_list_obj.load_schedule_list()
 image_resource = models.ImageResource()
 screen_data_resource = models.ScreenDataResource()
 screen_width, screen_height = size()
+pyautogui.FAILSAFE = False
+logging.basicConfig(level=logging.DEBUG)
 
 
 @app.get('/')
 def home():
-    return {'data': 'Testing'}
+    response = {'data': 'Testing'}
+    logging.debug(response)
+    return response
 
 
 @app.get("/get-actions/")
 def get_actions():
-    return action_list_obj.action_list
+    response = action_list_obj.action_list
+    logging.debug(response)
+    return response
 
 
 @app.get("/get-action/{action_id}")
@@ -71,48 +80,62 @@ def get_action(action_id: int = Path(None, description="The ID of the action you
         response = action_list_obj.action_list.get(str(action_id))
     else:
         response = {'data': 'Action not found.'}
+    logging.debug(response)
     return response
 
 
 @app.post('/add-action')
 def add_action(new_action: models.Action):
     response = action_list_obj.add_action(new_action)
+    logging.debug(response)
     return response
 
 
 @app.post("/update-action/{action_id}")
 def update_action(action_id: int, new_action: models.Action):
     if action_id >= len(action_list_obj.action_list) or action_id < 0:
-        return {'data': 'Invalid ID entered.'}
+        response = {'data': 'Invalid ID entered.'}
+        logging.debug(response)
+        return response
     action_list_obj.update_action(action_id, new_action)
-    return {'data': 'Action updated'}
+    response = {'data': 'Action updated'}
+    logging.debug(response)
+    return response
 
 
 @app.get('/delete-action/{action_id}')
 def delete_action(action_id: int):
     response = action_list_obj.delete_action(action_id)
+    logging.debug(response)
     return response
 
 
 @app.get("/get-tasks")
 def get_tasks():
     if len(task_list_obj.task_list) > 0:
-        return task_list_obj.task_list
-    return {'data': 'Not found'}
+        response = task_list_obj.task_list
+        logging.debug(response)
+        return response
+    response = {'data': 'Not found'}
+    logging.debug(response)
+    return response
 
 
 @app.get("/get-task/{task_name}")
 def get_task(task_name: str = Path(1, description="The name of the task you would like to view.")):
+    response = {'data': 'Task not found.'}
     if task_list_obj.task_list not in [None, {}]:
         for key in task_list_obj.task_list:
             if task_name == task_list_obj.task_list[key].get('name'):
-                return task_list_obj.task_list[key]
-    return {'data': 'Task not found.'}
+                response = task_list_obj.task_list[key]
+    logging.debug(response)
+    return response
 
 
 @app.post('/add-task')
 def add_task(task: models.Task):
     response = task_list_obj.add_task(task)
+    logging.debug(response)
     return response
 
 
@@ -124,17 +147,17 @@ def task_add_action(task_name: str, new_action: models.Action):
         for key in action_list_obj.action_list:
             if new_action.name == action_list_obj.action_list[key].get('name'):
                 new_action_id = action_list_obj.action_list[key].get('id')
-
+    response = {'data': f'Task {task_name} does not exist.'}
     if task_list_obj.task_list not in [None, {}]:
         for key in task_list_obj.task_list:
             if task_name == task_list_obj.task_list[key].get('name'):
                 task_list_obj.task_list[key]["action_id_list"].append(new_action_id)
-                return {'data': 'Action has been added to the task list.'}
-    return {'data': f'Task {task_name} does not exist.'}
+                response = {'data': 'Action has been added to the task list.'}
+    logging.debug(response)
+    return response
 
 
-@app.get("/execute-task/{task_id"
-         "}")
+@app.get("/execute-task/{task_id}")
 def execute_task(task_id: int):
     task = task_list_obj.task_list[str(task_id)]
     action_id_list = [] if task.get('action_id_list') in [None, []] else task["action_id_list"]
@@ -144,40 +167,50 @@ def execute_task(task_id: int):
         response = {'data': 'Task not found'}
     else:
         response = {'data': 'Task complete'}
+    logging.debug(response)
     return response
 
 
 @app.get("/get-schedules/")
 def get_schedules():
     if len(schedule_list_obj.schedule_list) > 0:
-        return schedule_list_obj.schedule_list
-    return {'data': 'Not found'}
+        response = schedule_list_obj.schedule_list
+    else:
+        response = {'data': 'Not found'}
+    logging.debug(response)
+    return response
 
 
 @app.get("/get-schedule/{schedule_name}")
 def get_schedule(schedule_name: str = Path(1, description="The ID of the schedule you would like to view.")):
+    response = {'data': 'Not found'}
     if schedule_list_obj.schedule_list not in [None, {}]:
         for key in schedule_list_obj.schedule_list:
             if schedule_name == schedule_list_obj.schedule_list[key].get('name'):
-                return schedule_list_obj.schedule_list[key]
-    return {'data': 'Not found'}
+                response = schedule_list_obj.schedule_list[key]
+    logging.debug(response)
+    return response
 
 
 @app.post('/schedule-add-task/{schedule_name}/{task_list_name}')
 def schedule_add_task(schedule_name: str, task_name: str):
+    response = {'data': 'Schedule does not exist.'}
     task_id = None
     if task_list_obj.task_list not in [None, {}]:
         for key in task_list_obj.task_list:
             if task_name == task_list_obj.task_list[key].get('name'):
                 task_id = task_list_obj.task_list[key].get('id')
     if task_id is None:
-        return {'data': 'Task does not exist.'}
+        response = {'data': 'Task does not exist.'}
+        logging.debug(response)
+        return response
     if schedule_list_obj.schedule_list not in [None, {}]:
         for key in schedule_list_obj.schedule_list:
             if schedule_name == schedule_list_obj.schedule_list[key].get('name'):
                 schedule_list_obj.schedule_list[key]['task_id_list'].append(task_id)
-                return {'data': 'Added task to schedule.'}
-    return {'data': 'Schedule does not exist.'}
+                response = {'data': 'Added task to schedule.'}
+    logging.debug(response)
+    return response
 
 
 @app.post('/execute-celery-action/{action_id}')
@@ -188,6 +221,7 @@ def execute_celery_action(action_id: int = Path(None, description="The ID of the
         response = {'data': f'{task}'}
     else:
         response = {'data': 'Action not found.'}
+    logging.debug(response)
     return response
 
 
@@ -197,82 +231,94 @@ def execute_action(action_id: int = Path(None, description="The ID of the action
     response = {'data': f'Error with action_id:{action_id}'}
     if action_list_obj.action_list.get(str(action_id)):
         action = action_list_obj.action_list.get(str(action_id))
-        if action.get("time_delay") not in [0.0, None]:
-            delay = float(action["time_delay"])
-            time.sleep(delay)
-        if action.get("function") not in ["", None]:
-            x = -1
-            y = -1
-            random_range = 0 if action.get("random_range") in [0, None] else action["random_range"]
-            random_delay = 0.0 if action.get("random_delay") in [0.0, None] else float(action["random_delay"])
-            if action.get("images") not in [[], None]:
-                needle_file_name = action["images"][0]
-                if action.get("images")[1] not in ["", None]:
-                    haystack_file_name = action["images"][1]
-                else:
-                    haystack_file_name = ""
-                percent_similarity = .9
-                x, y = screen_reader.image_search(needle_file_name=needle_file_name,
-                                                  haystack_file_name=haystack_file_name,
-                                                  percent_similarity=percent_similarity)
-            if action.get("x2") not in [-1, None] and action.get("y2") not in [-1, None]:
-                if action.get("x1") in [-1, None] or action.get("y1") in [-1, None]:
-                    return response
-                x1 = action["x1"]
-                y1 = action["y1"]
-                x2 = action["x2"]
-                y2 = action["y2"]
-                x_range = x2 - x1
-                y_range = y2 - y1
-                if action.get("random_range") not in [0, None]:
-                    # This fixes any errors with random mouse click range with region click
-                    if x_range > random_range*2:
-                        x1 = x1 + random_range
-                        x2 = x2 - random_range
-                    elif x_range < random_range and x_range > 4:
-                        random_range = 1
-                        x1 = x1 + random_range
-                        x2 = x2 - random_range
+        repeat = True if action.get("repeat") not in [False, None] else False
+        num_repeats = action.get("num_repeats") if action.get("num_repeats") not in [0, None] else 0
+        # Repeat action until num_repeats is 0 or repeat is false
+        while True:
+            if action.get("time_delay") not in [0.0, None]:
+                delay = float(action["time_delay"])
+                time.sleep(delay)
+            if action.get("function") not in ["", None]:
+                x = -1
+                y = -1
+                random_range = 0 if action.get("random_range") in [0, None] else action["random_range"]
+                random_delay = 0.0 if action.get("random_delay") in [0.0, None] else float(action["random_delay"])
+                if action.get("images") not in [[], None]:
+                    needle_file_name = action["images"][0]
+                    if action.get("images")[1] not in ["", None]:
+                        haystack_file_name = action["images"][1]
                     else:
-                        random_range = 0
-                    if y_range > random_range*2:
-                        y1 = y1 + random_range
-                        y2 = y2 - random_range
-                    elif y_range < random_range and y_range > 4:
-                        random_range = 1
-                        y1 = y1 + random_range
-                        y2 = y2 - random_range
+                        haystack_file_name = ""
+                    percent_similarity = .9
+                    x, y = screen_reader.image_search(needle_file_name=needle_file_name,
+                                                      haystack_file_name=haystack_file_name,
+                                                      percent_similarity=percent_similarity)
+                if action.get("x2") not in [-1, None] and action.get("y2") not in [-1, None]:
+                    if action.get("x1") in [-1, None] or action.get("y1") in [-1, None]:
+                        logging.debug(response)
+                        return response
+                    x1 = action["x1"]
+                    y1 = action["y1"]
+                    x2 = action["x2"]
+                    y2 = action["y2"]
+                    x_range = x2 - x1
+                    y_range = y2 - y1
+                    if action.get("random_range") not in [0, None]:
+                        # This fixes any errors with random mouse click range with region click
+                        if x_range > random_range*2:
+                            x1 = x1 + random_range
+                            x2 = x2 - random_range
+                        elif x_range < random_range and x_range > 4:
+                            random_range = 1
+                            x1 = x1 + random_range
+                            x2 = x2 - random_range
+                        else:
+                            random_range = 0
+                        if y_range > random_range*2:
+                            y1 = y1 + random_range
+                            y2 = y2 - random_range
+                        elif y_range < random_range and y_range > 4:
+                            random_range = 1
+                            y1 = y1 + random_range
+                            y2 = y2 - random_range
+                        else:
+                            random_range = 0
+                    x = random.randrange(x1, x2)
+                    y = random.randrange(y1, y2)
+                elif action.get("x1") not in [-1, None] and action.get("y1") not in [-1, None]:
+                    x = action["x1"]
+                    y = action["y1"]
+                if action["function"] == 'click' or action["function"] == 'click_image':
+                    if x == -1 or y == -1:
+                        logging.debug(response)
+                        return response
+                    if action.get("random_path") not in [False, None]:
+                        random_mouse.random_move(x=x, y=y)
+                    if action.get("random_range") not in [0, None] or action.get("random_delay") not in [0.0, None]:
+                        random_mouse.random_click(x=x, y=y, rand_range=random_range, delay_duration=random_delay)
                     else:
-                        random_range = 0
-                x = random.randrange(x1, x2)
-                y = random.randrange(y1, y2)
-            elif action.get("x1") not in [-1, None] and action.get("y1") not in [-1, None]:
-                x = action["x1"]
-                y = action["y1"]
-            if action["function"] == 'click' or action["function"] == 'click_image':
-                if x == -1 or y == -1:
-                    return response
-                if action.get("random_path") not in [False, None]:
-                    random_mouse.random_move(x=x, y=y)
-                if action.get("random_range") not in [0, None] or action.get("random_delay") not in [0.0, None]:
-                    random_mouse.random_click(x=x, y=y, rand_range=random_range, delay_duration=random_delay)
-                else:
-                    click(x,y)
-                response = {'data': f'Mouse clicked: ({x}, {y})'}
-            elif action["function"] == 'move_to' or action["function"] == 'move_to_image':
-                if x == -1 or y == -1:
-                    return response
-                if action.get("random_path") not in [False, None]:
-                    random_mouse.random_move(x=x, y=y)
-                else:
-                    moveTo(x=x, y=y)
-                response = {'data': f'Mouse moved to: ({x}, {y})'}
-            elif action["function"] == 'key_pressed' and action.get("key_pressed") not in ["", None]:
-                action_key = action["key_pressed"]
-                keyDown(action_key)
-                time.sleep(1)
-                keyUp(action_key)
-                response = {'data': f'Key pressed {action_key}'}
+                        click(x,y)
+                    response = {'data': f'Mouse clicked: ({x}, {y})'}
+                elif action["function"] == 'move_to' or action["function"] == 'move_to_image':
+                    if x == -1 or y == -1:
+                        logging.debug(response)
+                        return response
+                    if action.get("random_path") not in [False, None]:
+                        random_mouse.random_move(x=x, y=y)
+                    else:
+                        moveTo(x=x, y=y)
+                    response = {'data': f'Mouse moved to: ({x}, {y})'}
+                elif action["function"] == 'key_pressed' and action.get("key_pressed") not in ["", None]:
+                    action_key = action["key_pressed"]
+                    keyDown(action_key)
+                    time.sleep(1)
+                    keyUp(action_key)
+                    response = {'data': f'Key pressed {action_key}'}
+            if num_repeats <= 0 or not repeat:
+                break
+            elif num_repeats > 0:
+                num_repeats = num_repeats - 1
+    logging.debug(response)
     return response
 
 
@@ -291,7 +337,9 @@ def screen_shot():
     b64_string = base64.b64encode(png_img[1]).decode('utf-8')
     if os.path.exists(screenshot_path):
         os.remove(screenshot_path)
-    return {'data': b64_string}
+    response = {'data': b64_string}
+    logging.debug(response)
+    return response
 
 
 @app.post('/screen-snip/{x1}/{y1}/{x2}/{y2}/')
@@ -325,12 +373,11 @@ def screen_snip(x1: int, y1: int, x2: int, y2: int, image: models.Image):
         "base64str": f"{b64_string}"
     }
     image_obj = models.Image(**image_json)
-    print(image_obj)
     response = image_resource.store_image(image_obj)
     if response.get("data").startswith("Saved"):
-        return image_obj
-    else:
-        return response
+        response = image_obj
+    logging.debug(response)
+    return response
 
 
 @app.get('/move-mouse/{x}/{y}')
@@ -340,7 +387,7 @@ def move_mouse(x: int, y: int):
     if x <= screen_width and x >= 0 and y <= screen_height and y >= 0:
         moveTo(x, y)
         response = {'data': f'Moved mouse to ({x},{y})'}
-
+    logging.debug(response)
     return response
 
 
@@ -351,7 +398,7 @@ def mouse_click(x: int, y: int):
     if x <= screen_width and x >= 0 and y <= screen_height and y >= 0:
         click(x, y)
         response = {'data': f'Moved mouse to ({x},{y})'}
-
+    logging.debug(response)
     return response
 
 
@@ -362,7 +409,7 @@ def keypress(key_name: str):
     if key_name in valid_input:
         press(key_name)
         response = {'data': f'Key pressed {key_name}'}
-
+    logging.debug(response)
     return response
 
 @app.get('/capture-screen-data/{x1}/{y1}/{x2}/{y2}/{action_id}')
@@ -441,5 +488,6 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
     res = screen_data_resource.store_screen_data(screen_data)
     if count > 0:
         response = {'data': 'Screen data captured'}
+    logging.debug(response)
     return response
 
