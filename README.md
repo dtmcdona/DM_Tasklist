@@ -21,3 +21,8 @@ If you want pyautogui automation then use the following command:
 cd app
 uvicorn core.fast_api_automation:app --host 0.0.0.0 --port 8002 --reload
 ```
+
+I created two PostgreSQL adapter files with credentials in settings.py. The adapters are not part of the back-end.
+If you would like to use the PostgreSQL adapters then you need to setup a PostgreDB that match settings.py and connect
+the adapters to the endpoints.
+Currently, there is no need for a database but in the future it might be useful.
