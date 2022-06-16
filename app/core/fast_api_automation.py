@@ -255,6 +255,10 @@ def execute_action(action_id: int = Path(None, description="The ID of the action
             if action.get("function") not in ["", None]:
                 x = -1
                 y = -1
+                x1 = None
+                x2 = None
+                y1 = None
+                y2 = None
                 random_range = 0 if action.get("random_range") in [0, None] else action["random_range"]
                 random_delay = 0.0 if action.get("random_delay") in [0.0, None] else float(action["random_delay"])
                 if action.get("images") not in [[], None]:
@@ -269,7 +273,7 @@ def execute_action(action_id: int = Path(None, description="The ID of the action
                                                       percent_similarity=percent_similarity)
                 if action.get("x2") not in [-1, None] and action.get("y2") not in [-1, None]:
                     if action.get("x1") in [-1, None] or action.get("y1") in [-1, None]:
-                        logging.debug(response)
+                        logging.error(response)
                         return response
                     x1 = action["x1"]
                     y1 = action["y1"]
@@ -311,7 +315,7 @@ def execute_action(action_id: int = Path(None, description="The ID of the action
                     if action.get("random_range") not in [0, None] or action.get("random_delay") not in [0.0, None]:
                         random_mouse.random_click(x=x, y=y, rand_range=random_range, delay_duration=random_delay)
                     else:
-                        click(x,y)
+                        click(x, y)
                     response = {'data': f'Mouse clicked: ({x}, {y})'}
                 elif action["function"] == 'move_to' or action["function"] == 'move_to_image':
                     if x == -1 or y == -1:
@@ -328,6 +332,11 @@ def execute_action(action_id: int = Path(None, description="The ID of the action
                     time.sleep(1)
                     keyUp(action_key)
                     response = {'data': f'Key pressed {action_key}'}
+                elif action["function"] == 'capture_screen_data':
+                    if x1 and x2 and y1 and y2:
+                        action_id = action.get("id")
+                        response = capture_screen_data(x1=x1, y1=y1, x2=x2, y2=y2, action_id=action_id)
+
             if num_repeats <= 0 or not repeat:
                 break
             elif num_repeats > 0:
@@ -508,13 +517,14 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
         "base64str": b64_string,
         "screen_obj_ids": screen_obj_ids
     }
-    screen_data = models.ScreenData(**screen_data_json)
-    response = screen_data_resource.store_screen_data(screen_data)
-    logging.debug(response)
+    if count > 0:
+        screen_data = models.ScreenData(**screen_data_json)
+        response = screen_data_resource.store_screen_data(screen_data)
+        logging.debug(response)
     if count == 0:
         response = {'data': 'No screen objects found'}
-    logging.debug(response)
-    if action_id >= len(action_list_obj.action_list) or action_id < 0:
+        logging.warning(response)
+    elif action_id >= len(action_list_obj.action_list) or action_id < 0:
         """Create new action"""
         variables = [", ".join(screen_obj_ids), ", ".join(screen_obj_values)]
         new_action = {
