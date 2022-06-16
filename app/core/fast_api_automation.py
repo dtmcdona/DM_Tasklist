@@ -62,6 +62,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 @app.get('/')
 def home():
+    """Placeholder for home API"""
     response = {'data': 'Testing'}
     logging.debug(response)
     return response
@@ -69,6 +70,7 @@ def home():
 
 @app.get("/get-actions/")
 def get_actions():
+    """Gets all stored actions"""
     response = action_list_obj.action_list
     logging.debug(response)
     return response
@@ -76,6 +78,7 @@ def get_actions():
 
 @app.get("/get-action/{action_id}")
 def get_action(action_id: int = Path(None, description="The ID of the action you would like to view.")):
+    """Returns an action by id"""
     if action_list_obj.action_list.get(str(action_id)):
         response = action_list_obj.action_list.get(str(action_id))
     else:
@@ -86,6 +89,7 @@ def get_action(action_id: int = Path(None, description="The ID of the action you
 
 @app.post('/add-action')
 def add_action(new_action: models.Action):
+    """Adds a new action to storage"""
     response = action_list_obj.add_action(new_action)
     logging.debug(response)
     return response
@@ -93,6 +97,7 @@ def add_action(new_action: models.Action):
 
 @app.post("/update-action/{action_id}")
 def update_action(action_id: int, new_action: models.Action):
+    """Updates a previous action with new information"""
     if action_id >= len(action_list_obj.action_list) or action_id < 0:
         response = {'data': 'Invalid ID entered.'}
         logging.debug(response)
@@ -105,6 +110,7 @@ def update_action(action_id: int, new_action: models.Action):
 
 @app.get('/delete-action/{action_id}')
 def delete_action(action_id: int):
+    """Deletes an action by id"""
     response = action_list_obj.delete_action(action_id)
     logging.debug(response)
     return response
@@ -112,6 +118,7 @@ def delete_action(action_id: int):
 
 @app.get("/get-tasks")
 def get_tasks():
+    """Gets all stored tasks"""
     if len(task_list_obj.task_list) > 0:
         response = task_list_obj.task_list
         logging.debug(response)
@@ -123,6 +130,7 @@ def get_tasks():
 
 @app.get("/get-task/{task_name}")
 def get_task(task_name: str = Path(1, description="The name of the task you would like to view.")):
+    """Returns a task by name"""
     response = {'data': 'Task not found.'}
     if task_list_obj.task_list not in [None, {}]:
         for key in task_list_obj.task_list:
@@ -134,6 +142,7 @@ def get_task(task_name: str = Path(1, description="The name of the task you woul
 
 @app.post('/add-task')
 def add_task(task: models.Task):
+    """Adds a new task to storage"""
     response = task_list_obj.add_task(task)
     logging.debug(response)
     return response
@@ -141,6 +150,7 @@ def add_task(task: models.Task):
 
 @app.post('/tasks-add-action/{tasklist_name}')
 def task_add_action(task_name: str, new_action: models.Action):
+    """Adds a new action to task"""
     action_response = action_list_obj.add_action(new_action)
     new_action_id = None
     if action_list_obj.action_list not in [None, {}]:
@@ -159,6 +169,7 @@ def task_add_action(task_name: str, new_action: models.Action):
 
 @app.get("/execute-task/{task_id}")
 def execute_task(task_id: int):
+    """Executes a task by looping through the action list and executing each action"""
     task = task_list_obj.task_list[str(task_id)]
     action_id_list = [] if task.get('action_id_list') in [None, []] else task["action_id_list"]
     for action_id in action_id_list:
@@ -173,6 +184,7 @@ def execute_task(task_id: int):
 
 @app.get("/get-schedules/")
 def get_schedules():
+    """Gets all stored schedules"""
     if len(schedule_list_obj.schedule_list) > 0:
         response = schedule_list_obj.schedule_list
     else:
@@ -183,6 +195,7 @@ def get_schedules():
 
 @app.get("/get-schedule/{schedule_name}")
 def get_schedule(schedule_name: str = Path(1, description="The ID of the schedule you would like to view.")):
+    """Returns a schedule by name"""
     response = {'data': 'Not found'}
     if schedule_list_obj.schedule_list not in [None, {}]:
         for key in schedule_list_obj.schedule_list:
@@ -194,6 +207,7 @@ def get_schedule(schedule_name: str = Path(1, description="The ID of the schedul
 
 @app.post('/schedule-add-task/{schedule_name}/{task_list_name}')
 def schedule_add_task(schedule_name: str, task_name: str):
+    """Adds a task to a schedule"""
     response = {'data': 'Schedule does not exist.'}
     task_id = None
     if task_list_obj.task_list not in [None, {}]:
@@ -215,6 +229,7 @@ def schedule_add_task(schedule_name: str, task_name: str):
 
 @app.post('/execute-celery-action/{action_id}')
 def execute_celery_action(action_id: int = Path(None, description="The ID of the action you would like to run.")):
+    """This function creates a celery task that completes an actions"""
     if action_list_obj.action_list.get(str(action_id)):
         action = action_list_obj.action_list.get(str(action_id))
         task = celery_worker.run_action.delay(action["code"])
@@ -382,6 +397,7 @@ def screen_snip(x1: int, y1: int, x2: int, y2: int, image: models.Image):
 
 @app.get('/move-mouse/{x}/{y}')
 def move_mouse(x: int, y: int):
+    """Moves the mouse to (x, y)"""
     screen_width, screen_height = size()
     response = {'data': 'Invalid input'}
     if x <= screen_width and x >= 0 and y <= screen_height and y >= 0:
@@ -393,6 +409,7 @@ def move_mouse(x: int, y: int):
 
 @app.get('/mouse-click/{x}/{y}')
 def mouse_click(x: int, y: int):
+    """Moves and clicks the mouse at point (x, y)"""
     screen_width, screen_height = size()
     response = {'data': 'Invalid input'}
     if x <= screen_width and x >= 0 and y <= screen_height and y >= 0:
@@ -404,6 +421,7 @@ def mouse_click(x: int, y: int):
 
 @app.get('/keypress/{key_name}')
 def keypress(key_name: str):
+    """Presses the given key"""
     response = {'data': 'Invalid input'}
     valid_input = KEYBOARD_KEYS
     if key_name in valid_input:
@@ -414,6 +432,7 @@ def keypress(key_name: str):
 
 @app.get('/capture-screen-data/{x1}/{y1}/{x2}/{y2}/{action_id}')
 def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
+    """This function captures data within the region within (x1, y1) and (x2, y2)"""
     response = {'data': 'Screen data not captured'}
     screenshot_id = str(uuid.uuid4())
     base_dir = pathlib.Path('.').absolute()
@@ -449,6 +468,7 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
     screen_obj_ids = []
     english_dict = enchant.Dict("en_US")
     for index, word_data in enumerate(img_data.splitlines()):
+        """This loops through all words and numbers found within the region and stores in screen_object json files."""
         if index == 0:
             continue
         word = word_data.split()
@@ -460,6 +480,7 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
                 text = word[11]
                 word_action_id = None if action_id >= len(action_list_obj.action_list) or action_id < 0 else action_id
                 data_type = "text" if action_id >= len(action_list_obj.action_list) or action_id < 0 else "button"
+                """Screen objects are data that store information from GUI elements and/or actions"""
                 screen_object_json = {
                     "id": f"{word_id}",
                     "type": data_type,
@@ -472,12 +493,13 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
                     "y2": y1+word_y1+word_height
                 }
                 screen_object = models.ScreenObject(**screen_object_json)
-                print(screen_object)
+                logging.debug(screen_object)
                 response = screen_data_resource.store_screen_object(screen_object)
                 if response.get("data").startswith("Saved"):
                     count = count + 1
                 else:
-                    print(response)
+                    logging.debug(response)
+    """Screen Data JSON files are mainly kept for debugging purposes"""
     screen_data_json = {
         "id": screenshot_id,
         "timestamp": timestamp,
