@@ -102,8 +102,7 @@ def update_action(action_id: int, new_action: models.Action):
         response = {'data': 'Invalid ID entered.'}
         logging.debug(response)
         return response
-    action_list_obj.update_action(action_id, new_action)
-    response = {'data': 'Action updated'}
+    response = action_list_obj.update_action(action_id, new_action)
     logging.debug(response)
     return response
 
@@ -447,6 +446,7 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
     if width != screen_width and height != screen_height:
         cv2.imwrite(screenshot_path, img[y1:y2, x1:x2, :])
         img = cv2.imread(screenshot_path)
+    """Prepare screenshot for Pytesseract OCR"""
     png_img = cv2.imencode('.png', img)
     b64_string = base64.b64encode(png_img[1]).decode('utf-8')
     (h, w) = img.shape[:2]
@@ -466,6 +466,7 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
 
     count = 0
     screen_obj_ids = []
+    screen_obj_values = []
     english_dict = enchant.Dict("en_US")
     for index, word_data in enumerate(img_data.splitlines()):
         """This loops through all words and numbers found within the region and stores in screen_object json files."""
@@ -475,9 +476,10 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
         if len(word) == 12:
             if word[11].isnumeric() or english_dict.check(word[11]):
                 word_id = str(uuid.uuid4())
-                screen_obj_ids.append(word_id)
-                word_x1, word_y1, word_width, word_height = int(word[6]), int(word[7]), int(word[8]), int(word[9])
                 text = word[11]
+                screen_obj_ids.append(word_id)
+                screen_obj_values.append(text)
+                word_x1, word_y1, word_width, word_height = int(word[6]), int(word[7]), int(word[8]), int(word[9])
                 word_action_id = None if action_id >= len(action_list_obj.action_list) or action_id < 0 else action_id
                 data_type = "text" if action_id >= len(action_list_obj.action_list) or action_id < 0 else "button"
                 """Screen objects are data that store information from GUI elements and/or actions"""
@@ -507,9 +509,31 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
         "screen_obj_ids": screen_obj_ids
     }
     screen_data = models.ScreenData(**screen_data_json)
-    res = screen_data_resource.store_screen_data(screen_data)
-    if count > 0:
-        response = {'data': 'Screen data captured'}
+    response = screen_data_resource.store_screen_data(screen_data)
     logging.debug(response)
+    if count == 0:
+        response = {'data': 'No screen objects found'}
+    logging.debug(response)
+    if action_id >= len(action_list_obj.action_list) or action_id < 0:
+        """Create new action"""
+        variables = [", ".join(screen_obj_ids), ", ".join(screen_obj_values)]
+        new_action = {
+            "name": datetime.datetime.now().isoformat(),
+            "function": "capture_screen_data",
+            "variables": variables,
+            "x1": x1,
+            "x2": x2,
+            "y1": y1,
+            "y2": y2,
+        }
+        new_action_obj = models.Action(**new_action)
+        response = add_action(new_action=new_action_obj)
+    else:
+        """Update action with captured screen info"""
+        updated_action = get_action(action_id=action_id)
+        variables = [", ".join(screen_obj_ids), ", ".join(screen_obj_values)]
+        print(updated_action)
+        updated_action["variables"] = variables
+        updated_action_obj = models.Action(**updated_action)
+        response = update_action(action_id=action_id, new_action=updated_action_obj)
     return response
-

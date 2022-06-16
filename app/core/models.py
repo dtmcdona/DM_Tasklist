@@ -162,11 +162,12 @@ class ScreenDataResource:
     def store_screen_data(self, screen_data: ScreenData):
         file_name = f"{screen_data.id}.json"
         file_path = os.path.join(self.screen_data_dir, file_name)
-        response = {"data": f"Saved screen data: {file_name}"}
+        response = {"data": f"Error in store_screen_data"}
         with open(file_path, "w", encoding='utf-8') as file:
             json.dump(screen_data.dict(), file, indent=6)
+            response = {"data": f"{file_name}"}
             if console_log:
-                print(f"Saved screen data: {file_name}")
+                print(f"{file_name}")
         return response
 
     def load_screen_data(self, screen_data_id: str):
