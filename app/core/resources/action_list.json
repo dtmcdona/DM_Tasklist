@@ -3,9 +3,9 @@
             "id": 0,
             "name": "test_move_to",
             "function": "move_to",
-            "x1": 0,
+            "x1": 100,
             "x2": null,
-            "y1": 0,
+            "y1": 100,
             "y2": null,
             "images": [],
             "image_conditions": [],
@@ -34,7 +34,8 @@
             "images": [],
             "image_conditions": [],
             "variables": [],
-            "variable_condition": [],
+            "variable_conditions": [],
+            "comparison_values": [],
             "created_at": "2022-06-03T11:03:24.482436",
             "time_delay": 0.0,
             "key_pressed": null,
@@ -59,9 +60,12 @@
                   "616a2357-80ce-4c7e-b7c5-1c38cddcb6ed.png",
                   ""
             ],
-            "image_conditions": [],
+            "image_conditions": [
+                  "if_image_present"
+            ],
             "variables": [],
-            "variable_condition": [],
+            "variable_conditions": [],
+            "comparison_values": [],
             "created_at": "2022-06-06T16:56:05.045748",
             "time_delay": 11.651,
             "key_pressed": null,
@@ -85,10 +89,15 @@
             "images": [],
             "image_conditions": [],
             "variables": [
-                  "4d5cdc10-9d47-43c9-a7cf-78723ed231e6",
-                  "Parameters"
+                  "dfe2af93-2bab-485d-aca5-9d788ea4f09e",
+                  "Activities"
             ],
-            "variable_condition": [],
+            "variable_conditions": [
+                  "equals"
+            ],
+            "comparison_values": [
+                  "Activities"
+            ],
             "created_at": "2022-06-16T13:55:52.182763",
             "time_delay": 0.0,
             "key_pressed": null,

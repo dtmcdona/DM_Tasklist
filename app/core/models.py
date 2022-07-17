@@ -29,7 +29,8 @@ class Action(BaseModel):
     images: Optional[List[str]] = []
     image_conditions: Optional[List[str]] = []
     variables: Optional[List[str]] = []
-    variable_condition: Optional[List[str]] = []
+    variable_conditions: Optional[List[str]] = []
+    comparison_values: Optional[List[str]] = []
     created_at: Optional[str] = datetime.datetime.now().isoformat()
     time_delay: Optional[float] = 0.0
     key_pressed: Optional[str] = None
@@ -80,19 +81,13 @@ class ScreenData(BaseModel):
     screen_obj_ids: List[str]
 
 
-class Conditional(BaseModel):
-    """Conditionals represent the logic to check for any requirements needed to run an action or task"""
-    id: Optional[str] = uuid.uuid4()
-    condition: str
-    sleep_if_false: Optional[bool] = False
-    sleep_duration: Optional[float] = 0
-    sleep_retries: Optional[int] = 0
-    success_result: Json = {"data": "Success"}
-    failure_result: Json = {"data": "Failure"}
-    timestamp: str = datetime.datetime.now().isoformat()
+class ExtendedBaseModel(BaseModel):
+    @classmethod
+    def get_field_names(cls, alias=False):
+        return list(cls.schema(alias).get("properties").keys())
 
 
-class Image(BaseModel):
+class Image(ExtendedBaseModel):
     """Represents any picture image that needs to be stored via a 64 bit encoding"""
     id: Optional[str] = uuid.uuid4()
     width: Optional[int] = 1920
@@ -142,6 +137,62 @@ class MousePosition(BaseModel):
     y: int
     screen_width: int
     screen_height: int
+
+
+def fuzzy_dict_to_model(input_dict: dict):
+    all_models = {
+        "Image": Image.get_field_names(),
+        "ScreenObject": ScreenObject.get_field_names(),
+        "ScreenData": ScreenData.get_field_names(),
+    }
+    best_match = {}
+    for model, model_fields in all_models.items():
+        input_keys = input_dict.keys()
+        percent_match = len(set(model_fields) & set(input_keys)) / float(len(set(model_fields) | set(input_keys)))
+        new_match = {"model": model, "percent_match": percent_match}
+        if percent_match > 0:
+            if not best_match:
+                best_match = new_match
+            elif percent_match > best_match.get("percent_match"):
+                best_match = new_match
+                if percent_match == 1:
+                    break
+
+    if not best_match:
+        return None
+    elif best_match.get("model") == "Image":
+        obj_dir = os.path.join(resources_dir, "images")
+        try:
+            return Image(**input_dict), obj_dir
+        except:
+            return None
+    elif best_match.get("model") == "ScreenObject":
+        obj_dir = os.path.join(resources_dir, "screen_data")
+        try:
+            return ScreenObject(**input_dict), obj_dir
+        except:
+            return None
+    elif best_match.get("model") == "ScreenData":
+        obj_dir = os.path.join(resources_dir, "screen_data")
+        try:
+            return ScreenData(**input_dict), obj_dir
+        except:
+            return None
+
+
+class JsonResource:
+    def __init__(self, resource_dict):
+        self.obj, self.obj_dir = fuzzy_dict_to_model(resource_dict)
+
+    def store_object(self):
+        file_name = f"{self.obj.id}.json"
+        file_path = os.path.join(self.obj_dir, file_name)
+        response = {"data": f"Saved: {file_name}"}
+        with open(file_path, "w", encoding='utf-8') as file:
+            json.dump(self.obj.dict(), file, indent=6)
+            if console_log:
+                print(f"Saved: {file_name}")
+        return response
 
 
 class ScreenDataResource:

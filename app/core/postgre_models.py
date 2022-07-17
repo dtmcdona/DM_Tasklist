@@ -19,7 +19,8 @@ class Action(Base):
     images = Column(String(255), nullable=True)
     image_conditions = Column(String(255), nullable=True)
     variables = Column(String(255), nullable=True)
-    variable_condition = Column(String(255), nullable=True)
+    variable_conditions = Column(String(255), nullable=True)
+    comparison_values = Column(String(255), nullable=True)
     created_at = Column(String(50), nullable=True)
     time_delay = Column(Float, nullable=True)
     key_pressed = Column(String(10), nullable=True)
@@ -94,11 +95,15 @@ def save_actions_to_json():
             image_conditions = df_json.get("image_conditions").get(index).split(', ')
         else:
             image_conditions = []
-        variable = df_json.get("variables").get(index).split(', ') if df_json.get("images").get(index) else []
-        if df_json.get("images").get(index):
-            variable_condition = df_json.get("variable_condition").get(index).split(', ')
+        variables = df_json.get("variables").get(index).split(', ') if df_json.get("images").get(index) else []
+        if df_json.get("variable_conditions").get(index):
+            variable_conditions = df_json.get("variable_conditions").get(index).split(', ')
         else:
-            variable_condition = []
+            variable_conditions = []
+        if df_json.get("comparison_values").get(index):
+            comparison_values = df_json.get("comparison_values").get(index).split(', ')
+        else:
+            comparison_values = []
         new_action_list[index] = {
             "id": index,
             "name": df_json.get("name").get(index),
@@ -109,8 +114,9 @@ def save_actions_to_json():
             "y2": df_json.get("y2").get(index),
             "images": images,
             "image_conditions": image_conditions,
-            "variables": variable,
-            "variable_condition": variable_condition,
+            "variables": variables,
+            "variable_conditions": variable_conditions,
+            "comparison_values": comparison_values,
             "created_at": df_json.get("created_at").get(index),
             "time_delay": df_json.get("time_delay").get(index),
             "key_pressed": df_json.get("key_pressed").get(index),
@@ -134,8 +140,10 @@ def insert_action(new_action: models.Action):
     image_conditions_str = ', '.join(str(x) for x in image_conditions)
     variables = new_action.get('variables')
     variables_str = ', '.join(str(x) for x in variables)
-    variable_condition = new_action.get('variable_condition')
-    variable_condition_str = ', '.join(str(x) for x in variable_condition)
+    variable_conditions = new_action.get('variable_conditions')
+    variable_conditions_str = ', '.join(str(x) for x in variable_conditions)
+    comparison_values = new_action.get('comparison_values')
+    comparison_values_str = ', '.join(str(x) for x in comparison_values)
     repeat = 0 if new_action.get('repeat') is False else 1
     random_path = 0 if new_action.get('random_path') is False else 1
     insert_new_action = Action(name=new_action.get('name'),
@@ -147,7 +155,8 @@ def insert_action(new_action: models.Action):
                                images=images_str,
                                image_conditions=image_conditions_str,
                                variables=variables_str,
-                               variable_condition=variable_condition_str,
+                               variable_conditions=variable_conditions_str,
+                               comparison_values=comparison_values_str,
                                created_at=new_action.get('created_at'),
                                time_delay=new_action.get('time_delay'),
                                key_pressed=new_action.get('key_pressed'),

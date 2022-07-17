@@ -1,5 +1,6 @@
 from celery import Celery
-from typing import List
+
+from core import fast_api_automation as api
 
 
 celery = Celery(
@@ -9,12 +10,7 @@ celery = Celery(
 
 
 @celery.task(name="run_action")
-def run_action(action_str_list: List[str]):
-    for action_str in action_str_list:
-        if action_str.startswith("say_hello"):
-            param = action_str.lstrip("say_hello(\"")
-            param = param.rstrip("\")")
-            return f"Hello {param}"
-
-    return 'Action not processed.'
+def run_action(action_id: int):
+    response = api.execute_action(action_id)
+    return response
 
