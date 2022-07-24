@@ -55,24 +55,21 @@ def create():
 
 
 def seed_db():
-    """Seeds action_list, task_list, and schedule_lis to the database"""
-    action_list_obj = models.ActionList()
-    action_list_obj.load_action_list()
-    task_list_obj = models.TaskList()
-    task_list_obj.load_task_list()
-    schedule_list_obj = models.ScheduleList()
-    schedule_list_obj.load_schedule_list()
-    if action_list_obj.action_list not in [None, {}]:
-        for key in action_list_obj.action_list:
-            action = action_list_obj.action_list[key]
+    """Seeds json_collection, task_collection, and schedule_lis to the database"""
+    action_collection = models.JsonCollectionResource(models.Action)
+    task_collection = models.JsonCollectionResource(models.Task)
+    schedule_collection = models.JsonCollectionResource(models.Schedule)
+    if action_collection.json_collection not in [None, {}]:
+        for key in action_collection.json_collection:
+            action = action_collection.json_collection[key]
             insert_action(action)
-    if task_list_obj.task_list not in [None, {}]:
-        for key in task_list_obj.task_list:
-            task = task_list_obj.task_list[key]
+    if task_collection.json_collection not in [None, {}]:
+        for key in task_collection.json_collection:
+            task = task_collection.json_collection[key]
             insert_task(task)
-    if schedule_list_obj.schedule_list not in [None, {}]:
-        for key in schedule_list_obj.schedule_list:
-            schedule = schedule_list_obj.schedule_list[key]
+    if schedule_collection.json_collection not in [None, {}]:
+        for key in schedule_collection.json_collection:
+            schedule = schedule_collection.json_collection[key]
             insert_schedule(schedule)
 
 
@@ -86,8 +83,8 @@ def save_actions_to_json():
     df = get_actions()
     df_json = df.to_dict()
     print(df_json)
-    action_list_obj = models.ActionList()
-    new_action_list = {}
+    action_collection = models.JsonCollectionResource(models.Action)
+    new_json_collection = {}
     for index in df.index:
         print(index)
         images = df_json.get("images").get(index).split(', ') if df_json.get("images").get(index) else []
@@ -104,7 +101,7 @@ def save_actions_to_json():
             comparison_values = df_json.get("comparison_values").get(index).split(', ')
         else:
             comparison_values = []
-        new_action_list[index] = {
+        new_json_collection[index] = {
             "id": index,
             "name": df_json.get("name").get(index),
             "function": df_json.get("function").get(index),
@@ -129,8 +126,8 @@ def save_actions_to_json():
             "random_range": df_json.get("random_range").get(index),
             "random_delay": df_json.get("random_delay").get(index)
         }
-    action_list_obj.action_list = new_action_list
-    action_list_obj.save_action_list()
+    action_collection.json_collection = new_json_collection
+    action_collection.save_collection()
 
 
 def insert_action(new_action: models.Action):
@@ -188,18 +185,18 @@ def save_tasks_to_json():
     df = get_tasks()
     df_json = df.to_dict()
     print(df_json)
-    task_list_obj = models.TaskList()
-    new_task_list = {}
+    task_collection = models.JsonCollectionResource(models.Task)
+    new_task_collection = {}
     for index in df.index:
         ids = df_json.get("action_id_list").get(index).split(', ') if df_json.get("action_id_list").get(index) else []
-        new_task_list[index] = {
+        new_task_collection[index] = {
             "id": index,
             "name": df_json.get("name").get(index),
             "task_dependency_id": df_json.get("task_dependency_id").get(index),
             "action_id_list": ids,
         }
-    task_list_obj.task_list = new_task_list
-    task_list_obj.save_task_list()
+    task_collection.task_collection = new_task_collection
+    task_collection.save_collection()
 
 
 def insert_task(new_task: models.Task):
@@ -226,18 +223,18 @@ def get_schedules():
 def save_schedules_to_json():
     df = get_schedules()
     df_json = df.to_dict()
-    schedule_list_obj = models.ScheduleList()
-    new_schedule_list = {}
+    schedule_collection = models.JsonCollectionResource(models.Schedule)
+    new_json_collection = {}
     for index in df.index:
         ids = df_json.get("task_id_list").get(index).split(', ') if df_json.get("task_id_list").get(index) else []
-        new_schedule_list[index] = {
+        new_json_collection[index] = {
             "id": index,
             "name": df_json.get("name").get(index),
             "schedule_dependency_id": df_json.get("schedule_dependency_id").get(index),
             "task_id_list": ids,
         }
-    schedule_list_obj.schedule_list = new_schedule_list
-    schedule_list_obj.save_schedule_list()
+    schedule_collection.json_collection = new_json_collection
+    schedule_collection.save_collection()
 
 
 def insert_schedule(new_schedule: models.Schedule):

@@ -23,14 +23,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-action_list_obj = models.ActionList()
-action_list_obj.load_action_list()
-task_list_obj = models.TaskList()
-task_list_obj.load_task_list()
-schedule_list_obj = models.ScheduleList()
-schedule_list_obj.load_schedule_list()
-image_resource = models.ImageResource()
-screen_data_resource = models.ScreenDataResource()
+action_collection = models.JsonCollectionResource(models.Action)
+task_collection = models.JsonCollectionResource(models.Task)
+schedule_collection = models.JsonCollectionResource(models.Schedule)
 pyautogui.FAILSAFE = False
 logging.basicConfig(level=logging.DEBUG)
 
@@ -38,113 +33,80 @@ logging.basicConfig(level=logging.DEBUG)
 @app.get('/')
 def home():
     """Placeholder for home API"""
-    response = {'data': 'Testing'}
-    logging.debug(response)
-    return response
+    return {'data': 'Testing'}
 
 
 @app.get("/get-actions/")
 def get_actions():
     """Gets all stored actions"""
-    response = action_list_obj.action_list
-    logging.debug(response)
-    return response
+    return action_collection.json_collection
 
 
 @app.get("/get-action/{action_id}")
 def get_action(action_id: int = Path(None, description="The ID of the action you would like to view.")):
     """Returns an action by id"""
-    if action_list_obj.action_list.get(str(action_id)):
-        response = action_list_obj.action_list.get(str(action_id))
-    else:
-        response = {'data': 'Action not found.'}
-    logging.debug(response)
-    return response
+    return action_collection.get_collection(action_id)
 
 
 @app.post('/add-action')
 def add_action(new_action: models.Action):
     """Adds a new action to storage"""
-    response = action_list_obj.add_action(new_action)
-    logging.debug(response)
-    return response
+    return action_collection.add_collection(new_action)
 
 
 @app.post("/update-action/{action_id}")
 def update_action(action_id: int, new_action: models.Action):
     """Updates a previous action with new information"""
-    if action_id >= len(action_list_obj.action_list) or action_id < 0:
-        response = {'data': 'Invalid ID entered.'}
-        logging.debug(response)
-        return response
-    response = action_list_obj.update_action(action_id, new_action)
-    logging.debug(response)
-    return response
+    return action_collection.update_collection(action_id, new_action)
 
 
 @app.get('/delete-action/{action_id}')
 def delete_action(action_id: int):
     """Deletes an action by id"""
-    response = action_list_obj.delete_action(action_id)
-    logging.debug(response)
-    return response
+    return action_collection.delete_collection(action_id)
 
 
 @app.get("/get-tasks")
 def get_tasks():
     """Gets all stored tasks"""
-    if len(task_list_obj.task_list) > 0:
-        response = task_list_obj.task_list
-        logging.debug(response)
-        return response
-    response = {'data': 'Not found'}
-    logging.debug(response)
-    return response
+    return task_collection.json_collection
 
 
 @app.get("/get-task/{task_name}")
 def get_task(task_name: str = Path(1, description="The name of the task you would like to view.")):
     """Returns a task by name"""
-    response = {'data': 'Task not found.'}
-    if task_list_obj.task_list not in [None, {}]:
-        for key in task_list_obj.task_list:
-            if task_name == task_list_obj.task_list[key].get('name'):
-                response = task_list_obj.task_list[key]
-    logging.debug(response)
-    return response
+    return task_collection.get_collection_by_name(task_name)
 
 
 @app.post('/add-task')
 def add_task(task: models.Task):
     """Adds a new task to storage"""
-    response = task_list_obj.add_task(task)
-    logging.debug(response)
-    return response
+    return task_collection.add_collection(task)
 
 
-@app.post('/tasks-add-action/{tasklist_name}')
+@app.post('/tasks-add-action/{task_name}')
 def task_add_action(task_name: str, new_action: models.Action):
     """Adds a new action to task"""
-    action_response = action_list_obj.add_action(new_action)
+    action_response = action_collection.add_collection(new_action)
     new_action_id = None
-    if action_list_obj.action_list not in [None, {}]:
-        for key in action_list_obj.action_list:
-            if new_action.name == action_list_obj.action_list[key].get('name'):
-                new_action_id = action_list_obj.action_list[key].get('id')
+    if action_collection.json_collection not in [None, {}]:
+        for key in action_collection.json_collection:
+            if new_action.name == action_collection.json_collection[key].get('name'):
+                new_action_id = action_collection.json_collection[key].get('id')
     response = {'data': f'Task {task_name} does not exist.'}
-    if task_list_obj.task_list not in [None, {}]:
-        for key in task_list_obj.task_list:
-            if task_name == task_list_obj.task_list[key].get('name'):
-                task_list_obj.task_list[key]["action_id_list"].append(new_action_id)
-                response = {'data': 'Action has been added to the task list.'}
+    if task_collection.json_collection not in [None, {}]:
+        for key in task_collection.json_collection:
+            if task_name == task_collection.json_collection[key].get('name'):
+                task_collection.json_collection[key]["action_id_list"].append(new_action_id)
+                response = {'data': 'Action has been added to the task collection.'}
     logging.debug(response)
     return response
 
 
 @app.get("/execute-task/{task_id}")
 def execute_task(task_id: int):
-    """Executes a task by looping through the action list and executing each action"""
-    task = task_list_obj.task_list[str(task_id)]
+    """Executes a task by looping through the action collection and executing each action"""
+    task = task_collection.json_collection[str(task_id)]
     action_id_list = [] if task.get('action_id_list') in [None, []] else task["action_id_list"]
     for action_id in action_id_list:
         execute_action(action_id)
@@ -159,43 +121,32 @@ def execute_task(task_id: int):
 @app.get("/get-schedules/")
 def get_schedules():
     """Gets all stored schedules"""
-    if len(schedule_list_obj.schedule_list) > 0:
-        response = schedule_list_obj.schedule_list
-    else:
-        response = {'data': 'Not found'}
-    logging.debug(response)
-    return response
+    return schedule_collection.json_collection
 
 
 @app.get("/get-schedule/{schedule_name}")
 def get_schedule(schedule_name: str = Path(1, description="The ID of the schedule you would like to view.")):
     """Returns a schedule by name"""
-    response = {'data': 'Not found'}
-    if schedule_list_obj.schedule_list not in [None, {}]:
-        for key in schedule_list_obj.schedule_list:
-            if schedule_name == schedule_list_obj.schedule_list[key].get('name'):
-                response = schedule_list_obj.schedule_list[key]
-    logging.debug(response)
-    return response
+    return schedule_collection.get_collection_by_name(schedule_name)
 
 
-@app.post('/schedule-add-task/{schedule_name}/{task_list_name}')
-def schedule_add_task(schedule_name: str, task_name: str):
+@app.post('/schedule-add-task/{schedule_name}/{task_collection_name}')
+def schedule_add_task(schedule_name: str, task_collection_name: str):
     """Adds a task to a schedule"""
     response = {'data': 'Schedule does not exist.'}
     task_id = None
-    if task_list_obj.task_list not in [None, {}]:
-        for key in task_list_obj.task_list:
-            if task_name == task_list_obj.task_list[key].get('name'):
-                task_id = task_list_obj.task_list[key].get('id')
+    if task_collection.json_collection not in [None, {}]:
+        for key in task_collection.json_collection:
+            if task_collection_name == task_collection.json_collection[key].get('name'):
+                task_id = task_collection.json_collection[key].get('id')
     if task_id is None:
         response = {'data': 'Task does not exist.'}
         logging.debug(response)
         return response
-    if schedule_list_obj.schedule_list not in [None, {}]:
-        for key in schedule_list_obj.schedule_list:
-            if schedule_name == schedule_list_obj.schedule_list[key].get('name'):
-                schedule_list_obj.schedule_list[key]['task_id_list'].append(task_id)
+    if schedule_collection.json_collection not in [None, {}]:
+        for key in schedule_collection.json_collection:
+            if schedule_name == schedule_collection.json_collection[key].get('name'):
+                schedule_collection.json_collection[key]['task_id_list'].append(task_id)
                 response = {'data': 'Added task to schedule.'}
     logging.debug(response)
     return response
@@ -204,17 +155,15 @@ def schedule_add_task(schedule_name: str, task_name: str):
 @app.post('/execute-celery-action/{action_id}')
 def execute_celery_action(action_id: int = Path(None, description="The ID of the action you would like to run.")):
     """This function creates a celery task that completes an actions"""
-    task = celery_worker.run_action.delay(action_id)
-    response = {'data': f'{task}'}
-    return response
+    return celery_worker.run_action.delay(action_id)
 
 
 @app.post('/execute-action/{action_id}')
 def execute_action(action_id: int = Path(None, description="The ID of the action you would like to run.")):
     """This function only works with Fast API running on your local machine since docker containers run headless"""
     response = {'data': f'Error with action_id:{action_id}'}
-    if action_list_obj.action_list.get(str(action_id)):
-        action = action_list_obj.action_list.get(str(action_id))
+    if action_collection.json_collection.get(str(action_id)):
+        action = action_collection.json_collection.get(str(action_id))
         if action:
             response = process_controller.action_controller(action)
 

@@ -11,6 +11,5 @@ celery = Celery(
 
 @celery.task(name="run_action")
 def run_action(action_id: int):
-    response = api.execute_action(action_id)
-    return response
+    return api.execute_action(action_id)
 

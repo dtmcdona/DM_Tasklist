@@ -121,11 +121,11 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
                 screen_obj_ids.append(word_id)
                 screen_obj_values.append(text)
                 word_x1, word_y1, word_width, word_height = int(word[6]), int(word[7]), int(word[8]), int(word[9])
-                if action_id >= len(api.action_list_obj.action_list) or action_id < 0:
+                if action_id >= len(api.action_collection.json_collection) or action_id < 0:
                     word_action_id = None
                 else:
                     word_action_id = action_id
-                data_type = "text" if action_id >= len(api.action_list_obj.action_list) or action_id < 0 else "button"
+                data_type = "text" if action_id >= len(api.action_collection.json_collection) or action_id < 0 else "button"
                 """Screen objects are data that store information from GUI elements and/or actions"""
                 screen_object_json = {
                     "id": f"{word_id}",
@@ -138,9 +138,8 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
                     "x2": x1+word_x1+word_width,
                     "y2": y1+word_y1+word_height
                 }
-                screen_object = models.ScreenObject(**screen_object_json)
-                logging.debug(screen_object)
-                response = api.screen_data_resource.store_screen_object(screen_object)
+                response = models.JsonResource(screen_object_json).store_resource()
+                logging.debug(response)
                 if response.get("data").startswith("Saved"):
                     count = count + 1
                 else:
@@ -153,13 +152,12 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
         "screen_obj_ids": screen_obj_ids
     }
     if count > 0:
-        screen_data = models.ScreenData(**screen_data_json)
-        response = api.screen_data_resource.store_screen_data(screen_data)
+        response = models.JsonResource(screen_data_json).store_resource()
         logging.debug(response)
     if count == 0:
         response = {'data': 'No screen objects found'}
         logging.warning(response)
-    elif action_id >= len(api.action_list_obj.action_list) or action_id < 0:
+    elif action_id >= len(api.action_collection.json_collection) or action_id < 0:
         """Create new action"""
         variables = [", ".join(screen_obj_ids), ", ".join(screen_obj_values)]
         new_action = {
@@ -214,7 +212,7 @@ def screen_snip(x1: int, y1: int, x2: int, y2: int, image: models.Image):
         "base64str": f"{b64_string}"
     }
     image_obj = models.Image(**image_json)
-    response = api.image_resource.store_image(image_obj)
+    response = models.JsonResource(image_json).store_resource()
     if response.get("data").startswith("Saved"):
         response = image_obj
     logging.debug(response)

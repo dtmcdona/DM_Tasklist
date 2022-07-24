@@ -1,5 +1,6 @@
 import datetime
 import json
+import logging
 import os
 import sys
 import uuid
@@ -10,11 +11,17 @@ from pydantic.types import Json
 from typing import Optional, List
 
 
-base_dir = Path('.').absolute()
-resources_dir = os.path.join(base_dir, 'resources')
+base_dir = Path(".").absolute()
+resources_dir = os.path.join(base_dir, "resources")
 if not os.path.isdir(resources_dir):
-    resources_dir = os.path.join(base_dir, 'core', 'resources')
-console_log = False
+    resources_dir = os.path.join(base_dir, "core", "resources")
+logging.basicConfig(level=logging.DEBUG)
+
+
+class ExtendedBaseModel(BaseModel):
+    @classmethod
+    def get_field_names(cls, alias=False):
+        return list(cls.schema(alias).get("properties").keys())
 
 
 class Action(BaseModel):
@@ -60,7 +67,7 @@ class Schedule(BaseModel):
     task_id_list: List[int] = []
 
 
-class ScreenObject(BaseModel):
+class ScreenObject(ExtendedBaseModel):
     """Screen objects represent text, buttons, or GUI elements"""
     id: Optional[str] = uuid.uuid4()
     type: Optional[str] = "text"
@@ -73,18 +80,12 @@ class ScreenObject(BaseModel):
     y2: int
 
 
-class ScreenData(BaseModel):
+class ScreenData(ExtendedBaseModel):
     """Screen data is a collection for all the screen objects found and the screenshot is saved as a base 64 image"""
     id: Optional[str] = uuid.uuid4()
     timestamp: Optional[str] = datetime.datetime.now().isoformat()
     base64str: str
     screen_obj_ids: List[str]
-
-
-class ExtendedBaseModel(BaseModel):
-    @classmethod
-    def get_field_names(cls, alias=False):
-        return list(cls.schema(alias).get("properties").keys())
 
 
 class Image(ExtendedBaseModel):
@@ -139,420 +140,244 @@ class MousePosition(BaseModel):
     screen_height: int
 
 
-def fuzzy_dict_to_model(input_dict: dict):
-    all_models = {
-        "Image": Image.get_field_names(),
-        "ScreenObject": ScreenObject.get_field_names(),
-        "ScreenData": ScreenData.get_field_names(),
-    }
-    best_match = {}
-    for model, model_fields in all_models.items():
-        input_keys = input_dict.keys()
-        percent_match = len(set(model_fields) & set(input_keys)) / float(len(set(model_fields) | set(input_keys)))
-        new_match = {"model": model, "percent_match": percent_match}
-        if percent_match > 0:
-            if not best_match:
-                best_match = new_match
-            elif percent_match > best_match.get("percent_match"):
-                best_match = new_match
-                if percent_match == 1:
-                    break
-
-    if not best_match:
-        return None
-    elif best_match.get("model") == "Image":
-        obj_dir = os.path.join(resources_dir, "images")
-        try:
-            return Image(**input_dict), obj_dir
-        except:
-            return None
-    elif best_match.get("model") == "ScreenObject":
-        obj_dir = os.path.join(resources_dir, "screen_data")
-        try:
-            return ScreenObject(**input_dict), obj_dir
-        except:
-            return None
-    elif best_match.get("model") == "ScreenData":
-        obj_dir = os.path.join(resources_dir, "screen_data")
-        try:
-            return ScreenData(**input_dict), obj_dir
-        except:
-            return None
-
-
 class JsonResource:
     def __init__(self, resource_dict):
-        self.obj, self.obj_dir = fuzzy_dict_to_model(resource_dict)
+        self.obj, self.obj_dir = self.dict_to_model(resource_dict)
 
-    def store_object(self):
+    def dict_to_model(self, input_dict: dict):
+        all_models = {
+            "Image": Image.get_field_names(),
+            "ScreenObject": ScreenObject.get_field_names(),
+            "ScreenData": ScreenData.get_field_names(),
+        }
+        best_match = {}
+        for model, model_fields in all_models.items():
+            input_keys = input_dict.keys()
+            percent_match = len(set(model_fields) & set(input_keys)) / float(len(set(model_fields) | set(input_keys)))
+            new_match = {"model": model, "percent_match": percent_match}
+            if percent_match > 0:
+                if not best_match:
+                    best_match = new_match
+                elif percent_match > best_match.get("percent_match"):
+                    best_match = new_match
+                    if percent_match == 1:
+                        break
+
+        if not best_match:
+            return None
+        elif best_match.get("model") == "Image":
+            obj_dir = os.path.join(resources_dir, "images")
+            try:
+                return Image(**input_dict), obj_dir
+            except Exception:
+                return None
+        elif best_match.get("model") == "ScreenObject":
+            obj_dir = os.path.join(resources_dir, "screen_data")
+            try:
+                return ScreenObject(**input_dict), obj_dir
+            except Exception:
+                return None
+        elif best_match.get("model") == "ScreenData":
+            obj_dir = os.path.join(resources_dir, "screen_data")
+            try:
+                return ScreenData(**input_dict), obj_dir
+            except Exception:
+                return None
+
+    def store_resource(self):
         file_name = f"{self.obj.id}.json"
         file_path = os.path.join(self.obj_dir, file_name)
         response = {"data": f"Saved: {file_name}"}
-        with open(file_path, "w", encoding='utf-8') as file:
+        with open(file_path, "w", encoding="utf-8") as file:
             json.dump(self.obj.dict(), file, indent=6)
-            if console_log:
-                print(f"Saved: {file_name}")
+            logging.debug(response)
         return response
 
-
-class ScreenDataResource:
-    """Collection of screen data with store, load and delete functions"""
-    def __init__(self):
-        self.screen_data_dir = os.path.join(resources_dir, 'screen_data')
-
-    def store_screen_object(self, screen_object: ScreenObject):
-        file_name = f"{screen_object.id}.json"
-        file_path = os.path.join(self.screen_data_dir, file_name)
-        response = {"data": f"Saved screen data: {file_name}"}
-        with open(file_path, "w", encoding='utf-8') as file:
-            json.dump(screen_object.dict(), file, indent=6)
-            if console_log:
-                print(f"Saved screen data: {file_name}")
-        return response
-
-    def store_screen_data(self, screen_data: ScreenData):
-        file_name = f"{screen_data.id}.json"
-        file_path = os.path.join(self.screen_data_dir, file_name)
-        response = {"data": f"Error in store_screen_data"}
-        with open(file_path, "w", encoding='utf-8') as file:
-            json.dump(screen_data.dict(), file, indent=6)
-            response = {"data": f"{file_name}"}
-            if console_log:
-                print(f"{file_name}")
-        return response
-
-    def load_screen_data(self, screen_data_id: str):
-        file_name = f"{screen_data_id}.json"
-        file_path = os.path.join(self.screen_data_dir, file_name)
-        screen_data = {}
+    def load_resource(self):
+        file_name = f"{self.obj.id}.json"
+        file_path = os.path.join(self.obj_dir, file_name)
+        response = {"data": f"Loaded: {file_name}"}
+        obj_json = None
         if exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as file:
-                screen_data = json.loads(file.read())
-                if console_log:
-                    print(screen_data)
-                    print(f"Loaded screen data: {file_name}")
-        elif console_log:
-            print('File does not exist: ' + file_path)
-        return screen_data
-
-    def delete_screen_data(self, screen_data_id: str):
-        file_name = f"{screen_data_id}.json"
-        file_path = os.path.join(self.screen_data_dir, file_name)
-        response = {"data": f"File does not exist: {file_path}"}
-        if exists(file_path):
-            os.remove(os.path.join(self.screen_data_dir, file_path))
-            response = {"data": f"Deleted screen data: {file_name}"}
-            if console_log:
-                print(f"Deleted screen data: {file_name}")
-        elif console_log:
-            print(f"File does not exist: {file_path}")
-        return response
-
-
-class ImageResource:
-    """Collection of images with store, load and delete functions"""
-    def __init__(self):
-        self.image_dir = os.path.join(resources_dir, 'images')
-
-    def store_image(self, image: Image):
-        file_name = f"{image.id}.json"
-        file_path = os.path.join(self.image_dir, file_name)
-        response = {"data": f"Saved image: {file_name}"}
-        with open(file_path, "w", encoding='utf-8') as file:
-            json.dump(image.dict(), file, indent=6)
-            if console_log:
-                print(f"Saved image: {file_name}")
-        return response
-
-    def load_image(self, image_id: str):
-        file_name = f"{image_id}.json"
-        file_path = os.path.join(self.image_dir, file_name)
-        image = {}
-        if exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as file:
-                image = json.loads(file.read())
-                if console_log:
-                    print(image)
-                    print(f"Loaded image: {file_name}")
-        elif console_log:
-            print('File does not exist: ' + file_path)
-        return image
-
-    def delete_image(self, image_id: str):
-        file_name = f"{image_id}.json"
-        file_path = os.path.join(self.image_dir, file_name)
-        response = {"data": f"File does not exist: {file_path}"}
-        if exists(file_path):
-            os.remove(os.path.join(self.image_dir, file_path))
-            response = {"data": f"Deleted image: {file_name}"}
-            if console_log:
-                print(f"Deleted image: {file_name}")
-        elif console_log:
-            print(f"File does not exist: {file_path}")
-        return response
-
-
-class ActionList:
-    """Collection of all actions entered into the system"""
-    def __init__(self):
-        self.file_path = os.path.join(resources_dir, 'action_list.json')
-        self.action_list = {}
-        if exists(self.file_path):
-            self.load_action_list()
+            with open(file_path, "r", encoding="utf-8") as file:
+                obj_json = json.loads(file.read())
+                logging.debug(obj_json)
         else:
-            self.save_action_list()
+            response = {"data": f"File does not exist: {file_path}"}
+        logging.debug(response)
+        return obj_json
 
-    def add_action(self, action: Action):
+    def delete_resource(self):
+        file_name = f"{self.obj.id}.json"
+        file_path = os.path.join(self.obj_dir, file_name)
+        response = {"data": f"Deleted: {file_path}"}
+        if exists(file_path):
+            os.remove(file_path)
+        else:
+            response = {"data": f"File does not exist: {file_path}"}
+        logging.debug(response)
+        return response
+
+
+class JsonCollectionResource:
+    def __init__(self, model_cls):
+        self.model_cls = model_cls
+        self.json_collection = {}
+        if self.model_cls == Action:
+            self.file_path = os.path.join(resources_dir, "action_collection.json")
+        elif self.model_cls == Task:
+            self.file_path = os.path.join(resources_dir, "task_collection.json")
+        elif self.model_cls == Schedule:
+            self.file_path = os.path.join(resources_dir, "schedule_collection.json")
+        if exists(self.file_path):
+            self.load_collection()
+        else:
+            self.save_collection()
+
+    def model_to_str(self):
+        if self.model_cls == Action:
+            return "Action"
+        elif self.model_cls == Task:
+            return "Task"
+        elif self.model_cls == Schedule:
+            return "Schedule"
+
+    def get_collection(self, obj_id):
+        if self.json_collection.get(str(obj_id)):
+            response = self.json_collection.get(str(obj_id))
+        else:
+            response = {'data': f'{self.model_to_str()} not found.'}
+        return response
+    
+    def get_collection_by_name(self, obj_name):
+        response = {'data': 'Task not found.'}
+        if self.json_collection not in [None, {}]:
+            for key in self.json_collection:
+                if obj_name == self.json_collection[key].get('name'):
+                    response = self.json_collection[key]
+                    break
+        logging.debug(response)
+        return response
+    
+    def add_collection(self, obj):
         response = {}
-        if self.action_list not in [None, {}]:
+        if self.json_collection not in [None, {}]:
             names = []
-            for key in self.action_list:
-                names.append(self.action_list[key].get('name'))
-            if action.name not in names:
-                action.id = len(self.action_list)
-                self.action_list[str(action.id)] = action.dict()
-                self.save_action_list()
-                response = action
+            for key in self.json_collection:
+                names.append(self.json_collection[key].get("name"))
+            if obj.name not in names:
+                obj.id = len(self.json_collection)
+                self.json_collection[str(obj.id)] = obj.dict()
+                self.save_collection()
+                response = obj
             else:
-                index = names.index(action.name)
-                action.id = index
-                response = self.update_action(index, action)
+                index = names.index(obj.name)
+                obj.id = index
+                response = self.update_collection(index, obj)
         else:
-            action.id = 0
-            self.action_list = {
-                "0": action.dict()
+            obj.id = 0
+            self.json_collection = {
+                "0": obj.dict()
             }
-            response = action
-            self.save_action_list()
+            response = obj
+            self.save_collection()
+        logging.debug(f"Added {self.model_to_str()} with id: {obj.id}")
         return response
-
-    def update_action(self, index: int, action: Action):
-        self.action_list[str(index)] = action.dict()
-        self.save_action_list()
-        return action
-
-    def load_action_list(self):
-        self.action_list = {}
-        if exists(self.file_path):
-            with open(self.file_path, 'r', encoding='utf-8') as file:
-                self.action_list = json.loads(file.read())
-            if console_log:
-                print(self.action_list)
-                print("Loaded action list.")
-        else:
-            if console_log:
-                print('File does not exist: ' + self.file_path)
-
-    def save_action_list(self):
-        with open(self.file_path, "w", encoding='utf-8') as file:
-            json.dump(self.action_list, file, indent=6)
-            if console_log:
-                print("Saved action list.")
-
-    def delete_action(self, action_id: int):
-        if action_id >= len(self.action_list) or action_id < 0:
-            response = {'Data': f'Action does not exist'}
+    
+    def update_collection(self, index: int, obj):
+        if index >= len(self.json_collection) or index < 0:
+            response = {'data': 'Invalid ID entered.'}
+            logging.debug(response)
             return response
-        new_action_list = {}
+        self.json_collection[str(index)] = obj.dict()
+        self.save_collection()
+        logging.debug(f"Updated {self.model_to_str()} with id: {index}")
+        return obj
+        
+    def load_collection(self):
+        self.json_collection = {}
+        if exists(self.file_path):
+            with open(self.file_path, "r", encoding="utf-8") as file:
+                self.json_collection = json.loads(file.read())
+            logging.debug(self.json_collection)
+            logging.debug(f"Loaded {self.model_to_str()} collection")
+        else:
+            logging.debug(f"{self.model_to_str()} does not exist: " + self.file_path)
+
+    def save_collection(self):
+        with open(self.file_path, "w", encoding="utf-8") as file:
+            json.dump(self.json_collection, file, indent=6)
+            logging.debug(f"Saved {self.model_to_str()} collection")
+
+    def delete_collection(self, obj_id: int):
+        if obj_id >= len(self.json_collection) or obj_id < 0:
+            response = {"Data": f"{self.model_to_str()} does not exist: {obj_id}"}
+            return response
+        new_json_collection = {}
         index = 0
-        for key in self.action_list:
-            if key == str(action_id):
+        for key in self.json_collection:
+            if key == str(obj_id):
                 continue
-            element = self.action_list[str(key)]
+            element = self.json_collection[str(key)]
             element["id"] = index
-            new_action_list[str(index)] = element
+            new_json_collection[str(index)] = element
             index += 1
-        self.action_list = new_action_list
-        if console_log:
-            print(f"Deleted action id: {action_id}")
-        self.save_action_list()
-        response = {'Data': f'Deleted action id: {action_id}'}
+        self.json_collection = new_json_collection
+        response = {"Data": f"Deleted {self.model_to_str()} with id: {obj_id}"}
+        logging.debug(response)
+        self.save_collection()
         return response
-
-
-class TaskList:
-    """Collection of all tasks entered into the system"""
-    def __init__(self):
-        self.task_list = []
-        self.file_path = os.path.join(resources_dir, 'task_list.json')
-        if exists(self.file_path):
-            self.load_task_list()
-        else:
-            self.save_task_list()
-
-    def add_task(self, task: Task):
-        response = {}
-        if self.task_list not in [None, {}]:
-            names = []
-            for key in self.task_list:
-                names.append(self.task_list[key].get('name'))
-            if task.name not in names:
-                task.id = len(self.task_list)
-                self.task_list[str(task.id)] = task.dict()
-                response = task
-                self.save_task_list()
-            else:
-                index = names.index(task.name)
-                task.id = index
-                response = self.update_task(index, task)
-        else:
-            task.id = 0
-            self.task_list = {
-                str(task.id): task.dict()
-            }
-            response = task
-            self.save_task_list()
-        return response
-
-    def update_task(self, index: int, task: Task):
-        self.task_list[str(index)] = task.dict()
-        self.save_task_list()
-        return task
-
-    def load_task_list(self):
-        self.task_list = {}
-        if exists(self.file_path):
-            with open(self.file_path, 'r', encoding='utf-8') as file:
-                self.task_list = json.loads(file.read())
-            if console_log:
-                print(self.task_list)
-                print("Loaded task list.")
-        else:
-            if console_log:
-                print('File does not exist: ' + self.file_path)
-
-    def save_task_list(self):
-        with open(self.file_path, "w", encoding='utf-8') as file:
-            json.dump(self.task_list, file, indent=6)
-            if console_log:
-                print("Saved task list.")
-
-    def delete_task(self, task_id: int):
-        new_task_list = {}
-        index = 0
-        for key in self.task_list:
-            if key == str(task_id):
-                continue
-            element = self.task_list[str(key)]
-            element["id"] = index
-            new_task_list[str(index)] = element
-            index += 1
-        self.task_list = new_task_list
-        if console_log:
-            print(f"Deleted task id: {task_id}")
-        self.save_task_list()
-
-
-class ScheduleList:
-    """Collection of all schedules entered into the system"""
-    def __init__(self):
-        self.schedule_list = []
-        self.file_path = os.path.join(resources_dir, 'schedule_list.json')
-        if exists(self.file_path):
-            self.load_schedule_list()
-        else:
-            self.save_schedule_list()
-
-    def add_schedule(self, schedule: Schedule):
-        if self.schedule_list not in [None, {}]:
-            names = []
-            for key in self.schedule_list:
-                names.append(self.schedule_list[key].get('name'))
-            if schedule.name not in names:
-                schedule.id = len(self.schedule_list)
-                self.schedule_list[str(schedule.id)] = schedule.dict()
-            elif console_log:
-                print("Schedule already exists.")
-        else:
-            self.schedule_list = {
-                str(schedule.id): schedule.dict()
-            }
-        self.save_schedule_list()
-
-    def load_schedule_list(self):
-        self.schedule_list = {}
-        if exists(self.file_path):
-            with open(self.file_path, 'r', encoding='utf-8') as file:
-                self.schedule_list = json.loads(file.read())
-            if console_log:
-                print(self.schedule_list)
-                print("Loaded schedule list.")
-        else:
-            if console_log:
-                print('File does not exist: ' + self.file_path)
-
-    def save_schedule_list(self):
-        with open(self.file_path, "w", encoding='utf-8') as file:
-            json.dump(self.schedule_list, file, indent=6)
-            if console_log:
-                print("Saved schedule list.")
-
-    def delete_schedule(self, schedule_id: int):
-        new_schedule_list = {}
-        index = 0
-        for key in self.schedule_list:
-            if key == str(schedule_id):
-                continue
-            element = self.schedule_list[str(key)]
-            element["id"] = index
-            new_schedule_list[str(index)] = element
-            index += 1
-        self.schedule_list = new_schedule_list
-        if console_log:
-            print(f"Deleted schedule id: {schedule_id}")
-        self.save_schedule_list()
 
 
 class TestModels:
     """Used to test actions, tasks, and schedule lists"""
     def __init__(self):
-        self.action_list_obj = ActionList()
-        self.task_list_obj = TaskList()
-        self.schedule_list_obj = ScheduleList()
+        self.action_collection = JsonCollectionResource(Action)
+        self.task_collection = JsonCollectionResource(Task)
+        self.schedule_collection = JsonCollectionResource(Schedule)
 
     def test_crud_model(self):
         test_action1 = {
-            'id': 0,
-            'name': 'test_move_to',
-            'function': 'move_to',
-            'x1': 0,
-            'y1': 0
+            "id": 0,
+            "name": "test_move_to",
+            "function": "move_to",
+            "x1": 0,
+            "y1": 0
         }
         test_action2 = {
-            'id': 1,
-            'name': 'test_click',
-            'function': 'click',
-            'x1': 0,
-            'y1': 0
+            "id": 1,
+            "name": "test_click",
+            "function": "click",
+            "x1": 0,
+            "y1": 0
         }
         test_task = {
-            'id': 0,
-            'name': 'test_tasks',
-            'task_dependency_id': 0,
-            'action_id_list': [1, 2]
+            "id": 0,
+            "name": "test_tasks",
+            "task_dependency_id": 0,
+            "action_id_list": [1, 2]
         }
         test_shedule = {
-            'id': 0,
-            'name': 'test_schedule',
-            'schedule_dependency_id': 0,
-            'task_id_list': [1]
+            "id": 0,
+            "name": "test_schedule",
+            "schedule_dependency_id": 0,
+            "task_id_list": [1]
         }
         test_action_obj1 = Action(**test_action1)
         test_action_obj2 = Action(**test_action2)
-        self.action_list_obj.add_action(test_action_obj1)
-        self.action_list_obj.add_action(test_action_obj2)
-        print(self.action_list_obj)
+        self.action_collection.add_collection(test_action_obj1)
+        self.action_collection.add_collection(test_action_obj2)
+        logging.debug(self.action_collection)
         test_task_obj = Task(**test_task)
-        self.task_list_obj.add_task(test_task_obj)
+        self.task_collection.add_collection(test_task_obj)
         test_schedule1 = Schedule(**test_shedule)
-        self.schedule_list_obj.add_schedule(test_schedule1)
+        self.schedule_collection.add_collection(test_schedule1)
         func_name = sys._getframe().f_code.co_name
-        self.action_list_obj.load_action_list()
-        self.task_list_obj.load_task_list()
-        self.schedule_list_obj.load_schedule_list()
-        # self.action_list_obj.delete_action(0)
-        if console_log:
-            print("Test complete: "+func_name)
+        self.action_collection.load_collection()
+        self.task_collection.load_collection()
+        self.schedule_collection.load_collection()
+        # self.action_collection.delete_action(0)
+        logging.info("Test complete: "+func_name)
 
 
 def test_models() -> None:
