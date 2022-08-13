@@ -6,10 +6,10 @@ import sys
 import uuid
 from os.path import exists
 from pathlib import Path
+from typing import List, Optional
+
 from pydantic import BaseModel
 from pydantic.types import Json
-from typing import Optional, List
-
 
 base_dir = Path(".").absolute()
 resources_dir = os.path.join(base_dir, "resources")
@@ -26,6 +26,7 @@ class ExtendedBaseModel(BaseModel):
 
 class Action(BaseModel):
     """Actions represent the smallest process of a task"""
+
     id: Optional[int]
     name: str
     function: str
@@ -53,6 +54,7 @@ class Action(BaseModel):
 
 class Task(BaseModel):
     """Tasks represent a collection of actions that complete a goal"""
+
     id: Optional[int]
     name: str
     task_dependency_id: Optional[int] = None
@@ -61,6 +63,7 @@ class Task(BaseModel):
 
 class Schedule(BaseModel):
     """Schedule is a series of tasks to run over a given timeframe"""
+
     id: Optional[int]
     name: str
     schedule_dependency_id: Optional[int] = None
@@ -69,6 +72,7 @@ class Schedule(BaseModel):
 
 class ScreenObject(ExtendedBaseModel):
     """Screen objects represent text, buttons, or GUI elements"""
+
     id: Optional[str] = uuid.uuid4()
     type: Optional[str] = "text"
     action_id: Optional[int] = None
@@ -81,7 +85,9 @@ class ScreenObject(ExtendedBaseModel):
 
 
 class ScreenData(ExtendedBaseModel):
-    """Screen data is a collection for all the screen objects found and the screenshot is saved as a base 64 image"""
+    """Screen data is a collection for all the screen objects found and the
+    screenshot is saved as a base 64 image"""
+
     id: Optional[str] = uuid.uuid4()
     timestamp: Optional[str] = datetime.datetime.now().isoformat()
     base64str: str
@@ -89,7 +95,9 @@ class ScreenData(ExtendedBaseModel):
 
 
 class Image(ExtendedBaseModel):
-    """Represents any picture image that needs to be stored via a 64 bit encoding"""
+    """Represents any picture image that needs to be stored via a 64 bit
+    encoding"""
+
     id: Optional[str] = uuid.uuid4()
     width: Optional[int] = 1920
     height: Optional[int] = 1080
@@ -104,18 +112,22 @@ class Image(ExtendedBaseModel):
 
 class JsonData(BaseModel):
     """Abstract data type for storing unique data"""
+
     id: int
     data: Json
 
 
 class Source(BaseModel):
     """Represents an abstract data source stored in the file system"""
+
     id: int
     uri: str
 
 
 class CapturedData(BaseModel):
-    """Represents any form of data that can be captured as relevant data for an action or task"""
+    """Represents any form of data that can be captured as relevant data
+    for an action or task"""
+
     id: int
     type: str
     source_id: int
@@ -125,6 +137,7 @@ class CapturedData(BaseModel):
 
 class TaskRank(BaseModel):
     """Used to determine how efficient it completes a goal"""
+
     task_rank: int
     task_id: int
     delta_vars: List[float]
@@ -132,7 +145,9 @@ class TaskRank(BaseModel):
 
 
 class MousePosition(BaseModel):
-    """Might be used in the future to track relative mouse x and y coords for different resolutions"""
+    """Might be used in the future to track relative mouse x and y coords for
+    different resolutions"""
+
     action_id: int
     x: int
     y: int
@@ -153,8 +168,13 @@ class JsonResource:
         best_match = {}
         for model, model_fields in all_models.items():
             input_keys = input_dict.keys()
-            percent_match = len(set(model_fields) & set(input_keys)) / float(len(set(model_fields) | set(input_keys)))
-            new_match = {"model": model, "percent_match": percent_match}
+            percent_match = len(set(model_fields) & set(input_keys)) / float(
+                len(set(model_fields) | set(input_keys))
+            )
+            new_match = {
+                "model": model,
+                "percent_match": percent_match,
+            }
             if percent_match > 0:
                 if not best_match:
                     best_match = new_match
@@ -224,11 +244,14 @@ class JsonCollectionResource:
         self.model_cls = model_cls
         self.json_collection = {}
         if self.model_cls == Action:
-            self.file_path = os.path.join(resources_dir, "action_collection.json")
+            self.file_path = os.path.join(
+                resources_dir, "action_collection.json")
         elif self.model_cls == Task:
-            self.file_path = os.path.join(resources_dir, "task_collection.json")
+            self.file_path = os.path.join(
+                resources_dir, "task_collection.json")
         elif self.model_cls == Schedule:
-            self.file_path = os.path.join(resources_dir, "schedule_collection.json")
+            self.file_path = os.path.join(
+                resources_dir, "schedule_collection.json")
         if exists(self.file_path):
             self.load_collection()
         else:
@@ -246,19 +269,19 @@ class JsonCollectionResource:
         if self.json_collection.get(str(obj_id)):
             response = self.json_collection.get(str(obj_id))
         else:
-            response = {'data': f'{self.model_to_str()} not found.'}
+            response = {"data": f"{self.model_to_str()} not found."}
         return response
-    
+
     def get_collection_by_name(self, obj_name):
-        response = {'data': 'Task not found.'}
+        response = {"data": "Task not found."}
         if self.json_collection not in [None, {}]:
             for key in self.json_collection:
-                if obj_name == self.json_collection[key].get('name'):
+                if obj_name == self.json_collection[key].get("name"):
                     response = self.json_collection[key]
                     break
         logging.debug(response)
         return response
-    
+
     def add_collection(self, obj):
         response = {}
         if self.json_collection not in [None, {}]:
@@ -276,24 +299,22 @@ class JsonCollectionResource:
                 response = self.update_collection(index, obj)
         else:
             obj.id = 0
-            self.json_collection = {
-                "0": obj.dict()
-            }
+            self.json_collection = {"0": obj.dict()}
             response = obj
             self.save_collection()
         logging.debug(f"Added {self.model_to_str()} with id: {obj.id}")
         return response
-    
+
     def update_collection(self, index: int, obj):
         if index >= len(self.json_collection) or index < 0:
-            response = {'data': 'Invalid ID entered.'}
+            response = {"data": "Invalid ID entered."}
             logging.debug(response)
             return response
         self.json_collection[str(index)] = obj.dict()
         self.save_collection()
         logging.debug(f"Updated {self.model_to_str()} with id: {index}")
         return obj
-        
+
     def load_collection(self):
         self.json_collection = {}
         if exists(self.file_path):
@@ -302,7 +323,9 @@ class JsonCollectionResource:
             logging.debug(self.json_collection)
             logging.debug(f"Loaded {self.model_to_str()} collection")
         else:
-            logging.debug(f"{self.model_to_str()} does not exist: " + self.file_path)
+            logging.debug(
+                f"{self.model_to_str()} does not exist: " +
+                self.file_path)
 
     def save_collection(self):
         with open(self.file_path, "w", encoding="utf-8") as file:
@@ -311,7 +334,8 @@ class JsonCollectionResource:
 
     def delete_collection(self, obj_id: int):
         if obj_id >= len(self.json_collection) or obj_id < 0:
-            response = {"Data": f"{self.model_to_str()} does not exist: {obj_id}"}
+            response = {
+                "Data": f"{self.model_to_str()} does not exist: {obj_id}"}
             return response
         new_json_collection = {}
         index = 0
@@ -331,6 +355,7 @@ class JsonCollectionResource:
 
 class TestModels:
     """Used to test actions, tasks, and schedule lists"""
+
     def __init__(self):
         self.action_collection = JsonCollectionResource(Action)
         self.task_collection = JsonCollectionResource(Task)
@@ -342,26 +367,26 @@ class TestModels:
             "name": "test_move_to",
             "function": "move_to",
             "x1": 0,
-            "y1": 0
+            "y1": 0,
         }
         test_action2 = {
             "id": 1,
             "name": "test_click",
             "function": "click",
             "x1": 0,
-            "y1": 0
+            "y1": 0,
         }
         test_task = {
             "id": 0,
             "name": "test_tasks",
             "task_dependency_id": 0,
-            "action_id_list": [1, 2]
+            "action_id_list": [1, 2],
         }
         test_shedule = {
             "id": 0,
             "name": "test_schedule",
             "schedule_dependency_id": 0,
-            "task_id_list": [1]
+            "task_id_list": [1],
         }
         test_action_obj1 = Action(**test_action1)
         test_action_obj2 = Action(**test_action2)
@@ -377,7 +402,7 @@ class TestModels:
         self.task_collection.load_collection()
         self.schedule_collection.load_collection()
         # self.action_collection.delete_action(0)
-        logging.info("Test complete: "+func_name)
+        logging.info("Test complete: " + func_name)
 
 
 def test_models() -> None:

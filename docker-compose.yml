@@ -5,13 +5,19 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      shm_size: "1g"
+    shm_size: "2g"
     ports:
       - 8002:8002
     restart: always
     volumes:
       - ./app:/app
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - LC_ALL=C.UTF-8
+      - LANG=C.UTF-8
     command: >
-      sh -c "uvicorn core.fast_api_taskboard:app --host 0.0.0.0 --port 8002 --reload"
+      sh -c "uvicorn core.fast_api_automation:app --host 0.0.0.0 --port 8002 --reload"
 
   broker:
     hostname: broker
@@ -26,12 +32,18 @@ services:
   celery_worker:
     hostname: celery_worker
     container_name: celery_worker
-    build: .
-    command: celery -A app.core.celery_worker.celery worker --loglevel=info
+    build:
+      context: .
+      dockerfile: Dockerfile
+      shm_size: "1g"
+    shm_size: "2g"
+    command: celery -A core.celery_worker.celery worker --loglevel=info
     volumes:
-      - .:/app
+      - ./app:/app
     environment:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - LC_ALL=C.UTF-8
+      - LANG=C.UTF-8
     depends_on:
       - app
       - broker
