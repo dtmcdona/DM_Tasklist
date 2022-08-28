@@ -1,6 +1,6 @@
 # DM_Tasklist
 This project is a basic RPA system that uses Fast API endpoints as a backend for storing action 
-sequences and it streams screen data to the React.js frontend project (DM_React)
+sequences and streams screen data to the React.js frontend project (DM_React)
 
 To run this project via uvicorn you will need to install the following:
 1. This project uses a virtual xvfb display but if you would like to disable this feature then 
@@ -26,7 +26,7 @@ comment out or remove this from process_controller.py
 This terminal commands will run the system on your local system:
 ```angular2html
 cd app
-uvicorn core.fast_api_automation:app --host 0.0.0.0 --port 8002 --reload
+uvicorn core.fast_api_automation:app --host 0.0.0.0 --port 8003 --reload
 ```
 
 I created two PostgreSQL adapter files with credentials in settings.py. The adapters are not part of the back-end.

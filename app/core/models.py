@@ -41,6 +41,7 @@ class Action(BaseModel):
     comparison_values: Optional[List[str]] = []
     created_at: Optional[str] = datetime.datetime.now().isoformat()
     time_delay: Optional[float] = 0.0
+    sleep_duration: Optional[float] = 0.0
     key_pressed: Optional[str] = None
     true_case: Optional[str] = "conditions_true"
     false_case: Optional[str] = "conditions_false"
@@ -245,13 +246,14 @@ class JsonCollectionResource:
         self.json_collection = {}
         if self.model_cls == Action:
             self.file_path = os.path.join(
-                resources_dir, "action_collection.json")
+                resources_dir, "action_collection.json"
+            )
         elif self.model_cls == Task:
-            self.file_path = os.path.join(
-                resources_dir, "task_collection.json")
+            self.file_path = os.path.join(resources_dir, "task_collection.json")
         elif self.model_cls == Schedule:
             self.file_path = os.path.join(
-                resources_dir, "schedule_collection.json")
+                resources_dir, "schedule_collection.json"
+            )
         if exists(self.file_path):
             self.load_collection()
         else:
@@ -324,8 +326,8 @@ class JsonCollectionResource:
             logging.debug(f"Loaded {self.model_to_str()} collection")
         else:
             logging.debug(
-                f"{self.model_to_str()} does not exist: " +
-                self.file_path)
+                f"{self.model_to_str()} does not exist: " + self.file_path
+            )
 
     def save_collection(self):
         with open(self.file_path, "w", encoding="utf-8") as file:
@@ -335,7 +337,8 @@ class JsonCollectionResource:
     def delete_collection(self, obj_id: int):
         if obj_id >= len(self.json_collection) or obj_id < 0:
             response = {
-                "Data": f"{self.model_to_str()} does not exist: {obj_id}"}
+                "Data": f"{self.model_to_str()} does not exist: {obj_id}"
+            }
             return response
         new_json_collection = {}
         index = 0

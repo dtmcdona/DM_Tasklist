@@ -78,8 +78,9 @@ def get_tasks():
 @app.get("/get-task/{task_name}")
 def get_task(
     task_name: str = Path(
-        1,
-        description="The name of the task you would like to view.")):
+        1, description="The name of the task you would like to view."
+    )
+):
     """Returns a task by name"""
     return task_collection.get_collection_by_name(task_name)
 
@@ -98,9 +99,9 @@ def task_add_action(task_name: str, new_action: models.Action):
     if action_collection.json_collection not in [None, {}]:
         for key in action_collection.json_collection:
             if new_action.name == action_collection.json_collection[key].get(
-                    "name"):
-                new_action_id = action_collection.json_collection[key].get(
-                    "id")
+                "name"
+            ):
+                new_action_id = action_collection.json_collection[key].get("id")
     response = {"data": f"Task {task_name} does not exist."}
     if task_collection.json_collection not in [None, {}]:
         for key in task_collection.json_collection:
@@ -109,7 +110,8 @@ def task_add_action(task_name: str, new_action: models.Action):
                     new_action_id
                 )
                 response = {
-                    "data": "Action has been added to the task collection."}
+                    "data": "Action has been added to the task collection."
+                }
     logging.debug(response)
     return response
 
@@ -118,8 +120,11 @@ def task_add_action(task_name: str, new_action: models.Action):
 def execute_task(task_id: int):
     """Executes a task by looping through the action collection and executing each action"""
     task = task_collection.json_collection[str(task_id)]
-    action_id_list = ([] if task.get("action_id_list") in [
-        None, []] else task["action_id_list"])
+    action_id_list = (
+        []
+        if task.get("action_id_list") in [None, []]
+        else task["action_id_list"]
+    )
     for action_id in action_id_list:
         execute_action(action_id)
     if action_id_list in [None, []]:
@@ -155,7 +160,8 @@ def schedule_add_task(schedule_name: str, task_collection_name: str):
     if task_collection.json_collection not in [None, {}]:
         for key in task_collection.json_collection:
             if task_collection_name == task_collection.json_collection[key].get(
-                    "name"):
+                "name"
+            ):
                 task_id = task_collection.json_collection[key].get("id")
     if task_id is None:
         response = {"data": "Task does not exist."}
@@ -164,9 +170,11 @@ def schedule_add_task(schedule_name: str, task_collection_name: str):
     if schedule_collection.json_collection not in [None, {}]:
         for key in schedule_collection.json_collection:
             if schedule_name == schedule_collection.json_collection[key].get(
-                    "name"):
+                "name"
+            ):
                 schedule_collection.json_collection[key]["task_id_list"].append(
-                    task_id)
+                    task_id
+                )
                 response = {"data": "Added task to schedule."}
     logging.debug(response)
     return response

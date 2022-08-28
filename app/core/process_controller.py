@@ -20,6 +20,7 @@ from . import models, random_mouse, constants
 """Virtual display setup has to be setup before pyautogui is imported"""
 import Xlib.display
 from pyvirtualdisplay.display import Display
+
 disp = Display(visible=True, size=(1920, 1080), backend="xvfb", use_xauth=True)
 disp.start()
 import pyautogui
@@ -56,17 +57,18 @@ def mouse_pos():
 def open_browser(url: str):
     """Open a browser window"""
     try:
-        browser_options = "--disable-extensions --no-sandbox --disable-gpu " \
-                          "--disable-extension --desktop-window-1080p"
+        browser_options = (
+            "--disable-extensions --no-sandbox --disable-gpu "
+            "--disable-extension --desktop-window-1080p"
+        )
         cmd = f'google-chrome {browser_options} "{url}" 2> /dev/null'
         subprocess.Popen(cmd, shell=True)
     except Exception as ex:
         logging.debug(ex)
     # Time it takes for webbrowser to open and render to xvfb
     black_screen = os.path.join(
-        models.resources_dir,
-        "screenshot",
-        "black_screen.json")
+        models.resources_dir, "screenshot", "black_screen.json"
+    )
     response = {}
     time.sleep(1)
     logging.debug(black_screen)
@@ -77,14 +79,15 @@ def open_browser(url: str):
             while response.get("data") == black_screen_json.get("data"):
                 time.sleep(1)
                 response = screen_shot()
-                logging.debug(response.get("data") ==
-                              black_screen_json.get("data"))
+                logging.debug(
+                    response.get("data") == black_screen_json.get("data")
+                )
     return response
 
 
 def evaluate_conditional(condition, variable_value, comparison_value=None):
     """Comparison value is provided by user and the variable_value is from
-        capture_screen_data action"""
+    capture_screen_data action"""
     if condition not in constants.CONDITIONALS:
         pass
     if comparison_value:
@@ -134,8 +137,10 @@ def process_action(action: models.Action):
         y1 = None
         y2 = None
         random_range = (
-            0 if action.get("random_range") in [
-                0, None] else action["random_range"])
+            0
+            if action.get("random_range") in [0, None]
+            else action["random_range"]
+        )
         random_delay = (
             0.0
             if action.get("random_delay") in [0.0, None]
@@ -204,7 +209,7 @@ def process_action(action: models.Action):
                 return response
             if action.get("random_path") not in [False, None]:
                 random_mouse.random_move(x=x, y=y)
-            if action.get("random_range") not in [0, None, ] or action.get(
+            if action.get("random_range") not in [0, None,] or action.get(
                 "random_delay"
             ) not in [0.0, None]:
                 random_mouse.random_click(
@@ -216,7 +221,10 @@ def process_action(action: models.Action):
             else:
                 pyautogui.click(x, y)
             response = {"data": f"Mouse clicked: ({x}, {y})"}
-        elif action["function"] == "move_to" or action["function"] == "move_to_image":
+        elif (
+            action["function"] == "move_to"
+            or action["function"] == "move_to_image"
+        ):
             if x == -1 or y == -1:
                 logging.debug(response)
                 return response
@@ -225,7 +233,9 @@ def process_action(action: models.Action):
             else:
                 pyautogui.moveTo(x=x, y=y)
             response = {"data": f"Mouse moved to: ({x}, {y})"}
-        elif action["function"] == "key_pressed" and action.get("key_pressed") not in [
+        elif action["function"] == "key_pressed" and action.get(
+            "key_pressed"
+        ) not in [
             "",
             None,
         ]:
@@ -254,51 +264,85 @@ def get_conditionals_result(action: models.Action):
             conditionals_result = conditionals_result and evaluate_conditional(
                 condition, images
             )
-    if variable_conditions:
+    elif variable_conditions:
         """Variable conditionals are specific to OCR values compared to user input"""
         variables = action.get("variables")
         comparison_values = action.get("comparison_values")
         for count, ele in enumerate(variable_conditions):
             if len(comparison_values) > count + 1:
-                conditionals_result = conditionals_result and evaluate_conditional(
-                    variable_conditions[count], variables[(count * 2) + 1], )
-            else:
-                conditionals_result = conditionals_result and evaluate_conditional(
-                    variable_conditions[count],
-                    variables[(count * 2) + 1],
-                    comparison_values[count],
+                conditionals_result = (
+                    conditionals_result
+                    and evaluate_conditional(
+                        variable_conditions[count],
+                        variables[(count * 2) + 1],
+                    )
                 )
+            else:
+                conditionals_result = (
+                    conditionals_result
+                    and evaluate_conditional(
+                        variable_conditions[count],
+                        variables[(count * 2) + 1],
+                        comparison_values[count],
+                    )
+                )
+    else:
+        conditionals_result = False
     return conditionals_result
 
 
 def action_controller(action: models.Action):
     """This controller manages different outcomes of the action's conditional
-        and then processes the given action"""
+    and then processes the given action"""
     if action.get("function") not in constants.ACTIONS:
         response = {"data": f'Action has invalid function: {action.get("id")}'}
         logging.debug(response)
         return response
     repeat = True if action.get("repeat") not in [False, None] else False
-    num_repeats = (action.get("num_repeats") if action.get(
-        "num_repeats") not in [0, None] else 0)
+    num_repeats = (
+        action.get("num_repeats")
+        if action.get("num_repeats") not in [0, None]
+        else 0
+    )
     """Repeat action until num_repeats is 0 or repeat is false"""
     conditionals_true = True
-    action_after_condition = True if action.get("function") in ["capture_data_data"] else False
+    check_conditional = (
+        True
+        if action.get("function") in ["capture_data_data", "click_image"]
+        else False
+    )
     while conditionals_true:
-        if action_after_condition:
+        if check_conditional:
+            """Action with conditional"""
             conditionals_true = get_conditionals_result(action)
-            response = process_action(action)
+            if (
+                action.get(f"{conditionals_true.lower()}_case")
+                == "execute_action"
+            ):
+                response = process_action(action)
+            elif "repeat" in action.get(f"{conditionals_true.lower()}_case"):
+                if (
+                    action.get(f"{conditionals_true.lower()}_case")
+                    == "sleep_and_repeat"
+                ):
+                    time.sleep(action.get("sleep_duration"))
+                repeat = True
+                num_repeats = 1
+            else:
+                if action.get(f"{conditionals_true.lower()}_case") == "sleep":
+                    time.sleep(action.get("sleep_duration"))
+                response = action.get(f"{conditionals_true.lower()}_case")
+                break
         else:
+            """Action without conditional"""
             response = process_action(action)
-            conditionals_true = get_conditionals_result(action)
-        """Break out of loop if conditions are false or no repeats"""
-        if num_repeats <= 0 or not repeat:
+        """Break out of loop if no repeats"""
+        if not repeat:
             break
         elif num_repeats > 0:
             num_repeats = num_repeats - 1
-        if not conditionals_true:
-            logging.debug({"data": "False conditional(s)"})
-            break
+            if num_repeats <= 0:
+                repeat = False
     return response
 
 
@@ -395,7 +439,8 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
     resources_dir = os.path.join(base_dir, "resources", "screenshot")
     if not os.path.isdir(resources_dir):
         resources_dir = os.path.join(
-            base_dir, "core", "resources", "screenshot")
+            base_dir, "core", "resources", "screenshot"
+        )
     screenshot_path = os.path.join(resources_dir, f"{screenshot_id}.png")
     pyautogui.screenshot(screenshot_path)
     img = cv2.imread(screenshot_path)
@@ -410,12 +455,7 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
     (h, w) = img.shape[:2]
     img = cv2.resize(img, (w * 5, h * 5))
     gry = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    thr = cv2.threshold(
-        gry,
-        0,
-        255,
-        cv2.THRESH_BINARY_INV +
-        cv2.THRESH_OTSU)[1]
+    thr = cv2.threshold(gry, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
     cv2.imwrite(screenshot_path, thr)
     """There might be some case where inverting the image gives better results"""
     # screenshot_path = os.path.join(resources_dir, f'invert_{screenshot_id}.png')
@@ -432,8 +472,8 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
     screen_obj_values = []
     english_dict = enchant.Dict("en_US")
     for index, word_data in enumerate(img_data.splitlines()):
-        """This loops through all words and numbers found within the region 
-            and stores in screen_object json files."""
+        """This loops through all words and numbers found within the region
+        and stores in screen_object json files."""
         if index == 0:
             continue
         word = word_data.split()
@@ -476,7 +516,8 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
                     "y2": y1 + word_y1 + word_height,
                 }
                 response = models.JsonResource(
-                    screen_object_json).store_resource()
+                    screen_object_json
+                ).store_resource()
                 logging.debug(response)
                 if response.get("data").startswith("Saved"):
                     count = count + 1
@@ -495,7 +536,9 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
     if count == 0:
         response = {"data": "No screen objects found"}
         logging.warning(response)
-    elif action_id >= len(api.action_collection.json_collection) or action_id < 0:
+    elif (
+        action_id >= len(api.action_collection.json_collection) or action_id < 0
+    ):
         """Create new action"""
         variables = [
             ", ".join(screen_obj_ids),
@@ -523,14 +566,14 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
         updated_action["variables"] = variables
         updated_action_obj = models.Action(**updated_action)
         response = api.update_action(
-            action_id=action_id,
-            new_action=updated_action_obj)
+            action_id=action_id, new_action=updated_action_obj
+        )
     return response
 
 
 def screen_snip(x1: int, y1: int, x2: int, y2: int, image: models.Image):
     """This function is used to capture a section of the screen and
-        store in resources/images as png and json files"""
+    store in resources/images as png and json files"""
     base_dir = pathlib.Path(".").absolute()
     image_dir = os.path.join(base_dir, "resources", "images")
     if not os.path.isdir(image_dir):
@@ -574,9 +617,9 @@ def screen_shot():
     resources_dir = os.path.join(base_dir, "resources", "screenshot")
     if not os.path.isdir(resources_dir):
         resources_dir = os.path.join(
-            base_dir, "core", "resources", "screenshot")
-    screenshot_path = os.path.join(
-        resources_dir, f"screenshot_{timestamp}.png")
+            base_dir, "core", "resources", "screenshot"
+        )
+    screenshot_path = os.path.join(resources_dir, f"screenshot_{timestamp}.png")
     pyautogui.screenshot(screenshot_path)
     img = cv2.imread(screenshot_path)
     png_img = cv2.imencode(".png", img)
