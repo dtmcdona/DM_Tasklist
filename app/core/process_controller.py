@@ -307,20 +307,14 @@ def action_controller(action: models.Action):
     """Repeat action until num_repeats is 0 or repeat is false"""
     conditionals_true = True
     check_conditional = (
-        True
-        if action.get("function") in ["capture_data_data", "click_image"]
-        else False
+        True if action.get("function") == "capture_data_data" else False
     )
     while conditionals_true:
         if check_conditional:
-            """Action with conditional"""
+            """Capture and analyze screen information then process conditional case"""
+            response = process_action(action)
             conditionals_true = get_conditionals_result(action)
-            if (
-                action.get(f"{conditionals_true.lower()}_case")
-                == "execute_action"
-            ):
-                response = process_action(action)
-            elif "repeat" in action.get(f"{conditionals_true.lower()}_case"):
+            if "repeat" in action.get(f"{conditionals_true.lower()}_case"):
                 if (
                     action.get(f"{conditionals_true.lower()}_case")
                     == "sleep_and_repeat"

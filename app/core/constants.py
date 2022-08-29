@@ -17,7 +17,6 @@ CONDITIONALS = [
 ]
 
 RESULTS = [
-    "execute_action",
     "skip_action",
     "set_action_name",
     "skip_to_name",
