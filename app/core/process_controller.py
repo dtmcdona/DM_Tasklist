@@ -39,12 +39,12 @@ screen_width, screen_height = pyautogui.size()
 logging.basicConfig(level=logging.DEBUG)
 
 
-def mouse_up(mouse_button):
+def mouse_up(mouse_button="left"):
     """Mouse button up"""
     pyautogui.mouseUp(button=mouse_button)
 
 
-def mouse_down(mouse_button):
+def mouse_down(mouse_button="left"):
     """Mouse button down"""
     pyautogui.mouseDown(button=mouse_button)
 
@@ -209,7 +209,7 @@ def process_action(action: models.Action):
                 return response
             if action.get("random_path") not in [False, None]:
                 random_mouse.random_move(x=x, y=y)
-            if action.get("random_range") not in [0, None,] or action.get(
+            if action.get("random_range") not in [0, None] or action.get(
                 "random_delay"
             ) not in [0.0, None]:
                 random_mouse.random_click(
@@ -307,7 +307,7 @@ def action_controller(action: models.Action):
     """Repeat action until num_repeats is 0 or repeat is false"""
     conditionals_true = True
     check_conditional = (
-        True if action.get("function") == "capture_data_data" else False
+        True if action.get("function") == "capture_screen_data" else False
     )
     while conditionals_true:
         if check_conditional:
@@ -425,7 +425,9 @@ def image_search(
         return -1, -1
 
 
-def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
+def capture_screen_data(
+    x1: int, y1: int, x2: int, y2: int, action_id: int, testing: bool = False
+):
     """This function captures data within the region within (x1, y1) and (x2, y2)"""
     response = {"data": "Screen data not captured"}
     screenshot_id = str(uuid.uuid4())
@@ -437,7 +439,13 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
         )
     screenshot_path = os.path.join(resources_dir, f"{screenshot_id}.png")
     pyautogui.screenshot(screenshot_path)
-    img = cv2.imread(screenshot_path)
+    if testing:
+        test_image = os.path.join(
+            models.resources_dir, "images", "test_image.png"
+        )
+        img = cv2.imread(test_image)
+    else:
+        img = cv2.imread(screenshot_path)
     width = x2 - x1
     height = y2 - y1
     if width != screen_width and height != screen_height:
@@ -530,6 +538,25 @@ def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
     if count == 0:
         response = {"data": "No screen objects found"}
         logging.warning(response)
+    elif testing:
+        variables = [
+            ", ".join(screen_obj_ids),
+            ", ".join(screen_obj_values),
+        ]
+        test_result_dict = {
+            "name": datetime.datetime.now().isoformat(),
+            "function": "capture_screen_data",
+            "variables": variables,
+            "x1": x1,
+            "x2": x2,
+            "y1": y1,
+            "y2": y2,
+            "screen_data_id": screenshot_id,
+            "timestamp": timestamp,
+            "base64str": b64_string,
+            "screen_obj_ids": screen_obj_ids,
+        }
+        return test_result_dict
     elif (
         action_id >= len(api.action_collection.json_collection) or action_id < 0
     ):
@@ -583,8 +610,8 @@ def screen_snip(x1: int, y1: int, x2: int, y2: int, image: models.Image):
     snip_img = cv2.imread(image_path)
     snip_png_img = cv2.imencode(".png", snip_img)
     b64_string = base64.b64encode(snip_png_img[1]).decode("utf-8")
-    width = snip_img.shape[0]
-    height = snip_img.shape[1]
+    height = snip_img.shape[0]
+    width = snip_img.shape[1]
     """Build json object"""
     image_json = {
         "id": f"{image_id}",

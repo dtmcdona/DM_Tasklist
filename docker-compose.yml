@@ -8,7 +8,7 @@ services:
       shm_size: "1g"
     shm_size: "2g"
     ports:
-      - 8002:8002
+      - 8003:8003
     restart: always
     volumes:
       - ./app:/app
@@ -17,7 +17,7 @@ services:
       - LC_ALL=C.UTF-8
       - LANG=C.UTF-8
     command: >
-      sh -c "uvicorn core.fast_api_automation:app --host 0.0.0.0 --port 8002 --reload"
+      sh -c "uvicorn core.fast_api_automation:app --host 0.0.0.0 --port 8003 --reload"
 
   broker:
     hostname: broker

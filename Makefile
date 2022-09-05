@@ -3,3 +3,7 @@ init:
 
 format:
 	black --line-length 80 app/core
+
+refresh:
+	docker compose stop
+	docker compose up

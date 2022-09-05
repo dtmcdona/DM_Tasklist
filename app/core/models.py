@@ -241,18 +241,21 @@ class JsonResource:
 
 
 class JsonCollectionResource:
-    def __init__(self, model_cls):
+    def __init__(self, model_cls, testing=False):
         self.model_cls = model_cls
         self.json_collection = {}
+        test_file = "test_" if testing else ""
         if self.model_cls == Action:
             self.file_path = os.path.join(
-                resources_dir, "action_collection.json"
+                resources_dir, f"{test_file}action_collection.json"
             )
         elif self.model_cls == Task:
-            self.file_path = os.path.join(resources_dir, "task_collection.json")
+            self.file_path = os.path.join(
+                resources_dir, f"{test_file}task_collection.json"
+            )
         elif self.model_cls == Schedule:
             self.file_path = os.path.join(
-                resources_dir, "schedule_collection.json"
+                resources_dir, f"{test_file}schedule_collection.json"
             )
         if exists(self.file_path):
             self.load_collection()
@@ -354,65 +357,3 @@ class JsonCollectionResource:
         logging.debug(response)
         self.save_collection()
         return response
-
-
-class TestModels:
-    """Used to test actions, tasks, and schedule lists"""
-
-    def __init__(self):
-        self.action_collection = JsonCollectionResource(Action)
-        self.task_collection = JsonCollectionResource(Task)
-        self.schedule_collection = JsonCollectionResource(Schedule)
-
-    def test_crud_model(self):
-        test_action1 = {
-            "id": 0,
-            "name": "test_move_to",
-            "function": "move_to",
-            "x1": 0,
-            "y1": 0,
-        }
-        test_action2 = {
-            "id": 1,
-            "name": "test_click",
-            "function": "click",
-            "x1": 0,
-            "y1": 0,
-        }
-        test_task = {
-            "id": 0,
-            "name": "test_tasks",
-            "task_dependency_id": 0,
-            "action_id_list": [1, 2],
-        }
-        test_shedule = {
-            "id": 0,
-            "name": "test_schedule",
-            "schedule_dependency_id": 0,
-            "task_id_list": [1],
-        }
-        test_action_obj1 = Action(**test_action1)
-        test_action_obj2 = Action(**test_action2)
-        self.action_collection.add_collection(test_action_obj1)
-        self.action_collection.add_collection(test_action_obj2)
-        logging.debug(self.action_collection)
-        test_task_obj = Task(**test_task)
-        self.task_collection.add_collection(test_task_obj)
-        test_schedule1 = Schedule(**test_shedule)
-        self.schedule_collection.add_collection(test_schedule1)
-        func_name = sys._getframe().f_code.co_name
-        self.action_collection.load_collection()
-        self.task_collection.load_collection()
-        self.schedule_collection.load_collection()
-        # self.action_collection.delete_action(0)
-        logging.info("Test complete: " + func_name)
-
-
-def test_models() -> None:
-    """Test function"""
-    test_obj = TestModels()
-    test_obj.test_crud_model()
-
-
-if __name__ == "__main__":
-    test_models()

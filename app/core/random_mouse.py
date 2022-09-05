@@ -64,11 +64,11 @@ def random_click(
         time.sleep(delay_duration)
 
     random_duration = (random.randrange(150, 450, 6)) / 1000
-    process_controller.mouse_move()
+    process_controller.mouse_up(mouse_button=mouse_button)
     process_controller.mouse_move(random_x, random_y)
-    process_controller.mouse_down(button=mouse_button)
+    process_controller.mouse_down(mouse_button=mouse_button)
     time.sleep(random_duration)
-    process_controller.mouse_up(button=mouse_button)
+    process_controller.mouse_up(mouse_button=mouse_button)
 
 
 def mouse_drift():
