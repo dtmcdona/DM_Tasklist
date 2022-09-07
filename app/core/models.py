@@ -46,7 +46,6 @@ class Action(BaseModel):
     true_case: Optional[str] = "conditions_true"
     false_case: Optional[str] = "conditions_false"
     error_case: Optional[str] = "error"
-    repeat: Optional[bool] = False
     num_repeats: Optional[int] = 0
     random_path: Optional[bool] = False
     random_range: Optional[int] = 0

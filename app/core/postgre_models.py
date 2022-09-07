@@ -38,7 +38,6 @@ class Action(Base):
     true_case = Column(String(50), nullable=True)
     false_case = Column(String(50), nullable=True)
     error_case = Column(String(50), nullable=True)
-    repeat = Column(SmallInteger, default=0)
     num_repeats = Column(Integer, nullable=True)
     random_path = Column(SmallInteger, default=0)
     random_range = Column(Integer, nullable=True)
@@ -151,9 +150,6 @@ def save_actions_to_json():
             "true_case": df_json.get("true_case").get(index),
             "false_case": df_json.get("false_case").get(index),
             "error_case": df_json.get("error_case").get(index),
-            "repeat": True
-            if df_json.get("repeat").get(index) == 1
-            else False,
             "num_repeats": df_json.get("num_repeats").get(index),
             "random_path": True
             if df_json.get("random_path").get(index) == 1
@@ -180,7 +176,6 @@ def insert_action(new_action: models.Action):
     comparison_values_str = ", ".join(
         str(x) for x in comparison_values
     )
-    repeat = 0 if new_action.get("repeat") is False else 1
     random_path = 0 if new_action.get("random_path") is False else 1
     insert_new_action = Action(
         name=new_action.get("name"),
@@ -200,7 +195,6 @@ def insert_action(new_action: models.Action):
         true_case=new_action.get("true_case"),
         false_case=new_action.get("false_case"),
         error_case=new_action.get("error_case"),
-        repeat=repeat,
         num_repeats=new_action.get("num_repeats"),
         random_path=random_path,
         random_range=new_action.get("random_range"),

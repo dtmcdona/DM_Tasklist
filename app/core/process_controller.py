@@ -298,7 +298,6 @@ def action_controller(action: models.Action):
         response = {"data": f'Action has invalid function: {action.get("id")}'}
         logging.debug(response)
         return response
-    repeat = True if action.get("repeat") not in [False, None] else False
     num_repeats = (
         action.get("num_repeats")
         if action.get("num_repeats") not in [0, None]
@@ -320,7 +319,6 @@ def action_controller(action: models.Action):
                     == "sleep_and_repeat"
                 ):
                     time.sleep(action.get("sleep_duration"))
-                repeat = True
                 num_repeats = 1
             else:
                 if action.get(f"{conditionals_true.lower()}_case") == "sleep":
@@ -331,7 +329,7 @@ def action_controller(action: models.Action):
             """Action without conditional"""
             response = process_action(action)
         """Break out of loop if no repeats"""
-        if not repeat:
+        if num_repeats <= 0:
             break
         elif num_repeats > 0:
             num_repeats = num_repeats - 1

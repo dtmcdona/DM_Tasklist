@@ -1,10 +1,2 @@
 {
-      "0": {
-            "id": 0,
-            "name": "test_schedule",
-            "schedule_dependency_id": 0,
-            "task_id_list": [
-                  0
-            ]
-      }
 }
