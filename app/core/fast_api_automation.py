@@ -28,7 +28,7 @@ def home():
     return {"data": "Testing"}
 
 
-@app.get("/open_broswer/{url}")
+@app.post("/open_broswer/")
 def open_broswer(url: str):
     """Opens a browser on local machine in xvfb display (does not work in docker container)"""
     return process_controller.open_browser(url)

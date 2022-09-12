@@ -338,13 +338,32 @@ def action_controller(action: models.Action):
     return response
 
 
-def keypress(key_name: str):
-    """Presses the given key"""
+def keypress(key_input: str, duration: float = 0.05):
+    """Presses the given key for a duration"""
     response = {"data": "Invalid input"}
     valid_input = pyautogui.KEYBOARD_KEYS
-    if key_name in valid_input:
-        pyautogui.press(key_name)
-        response = {"data": f"Key pressed {key_name}"}
+    if key_input in valid_input:
+        pyautogui.keyDown(key_input)
+        time.sleep(duration)
+        pyautogui.keyUp(key_input)
+        response = {"data": f"Key pressed {key_input}"}
+    else:
+        combo_key_array = key_input.split("|")
+        if len(combo_key_array) > 1:
+            for combo_key in combo_key_array:
+                pyautogui.keyDown(combo_key)
+            time.sleep(duration)
+            for combo_key in combo_key_array:
+                pyautogui.keyUp(combo_key)
+            response = {"data": f"Key pressed {key_input}"}
+        else:
+            key_array = list(key_input)
+            if len(key_array) > 1:
+                for key in key_array:
+                    pyautogui.keyDown(key)
+                    time.sleep(duration)
+                    pyautogui.keyUp(key)
+                response = {"data": f"Key pressed {key_input}"}
     logging.debug(response)
     return response
 
@@ -646,5 +665,4 @@ def screen_shot():
     if os.path.exists(screenshot_path):
         os.remove(screenshot_path)
     response = {"data": b64_string}
-    logging.debug(response)
     return response
