@@ -25,10 +25,8 @@ disp = Display(visible=True, size=(1920, 1080), backend="xvfb", use_xauth=True)
 disp.start()
 import pyautogui
 
-
 """Virtual display"""
 pyautogui._pyautogui_x11._display = Xlib.display.Display(os.environ["DISPLAY"])
-
 
 base_dir = pathlib.Path(".").absolute()
 resources_dir = os.path.join(base_dir, "resources")
@@ -107,10 +105,10 @@ def evaluate_conditional(condition, variable_value, comparison_value=None):
             else:
                 return False
     if (
-        condition == "if"
-        and variable_value
-        or condition == "if_not"
-        and not variable_value
+            condition == "if"
+            and variable_value
+            or condition == "if_not"
+            and not variable_value
     ):
         return True
     elif condition == "if" or condition == "if_not" and variable_value:
@@ -210,7 +208,7 @@ def process_action(action: models.Action):
             if action.get("random_path") not in [False, None]:
                 random_mouse.random_move(x=x, y=y)
             if action.get("random_range") not in [0, None] or action.get(
-                "random_delay"
+                    "random_delay"
             ) not in [0.0, None]:
                 random_mouse.random_click(
                     x=x,
@@ -222,8 +220,8 @@ def process_action(action: models.Action):
                 pyautogui.click(x, y)
             response = {"data": f"Mouse clicked: ({x}, {y})"}
         elif (
-            action["function"] == "move_to"
-            or action["function"] == "move_to_image"
+                action["function"] == "move_to"
+                or action["function"] == "move_to_image"
         ):
             if x == -1 or y == -1:
                 logging.debug(response)
@@ -234,15 +232,13 @@ def process_action(action: models.Action):
                 pyautogui.moveTo(x=x, y=y)
             response = {"data": f"Mouse moved to: ({x}, {y})"}
         elif action["function"] == "key_pressed" and action.get(
-            "key_pressed"
+                "key_pressed"
         ) not in [
             "",
             None,
         ]:
             action_key = action["key_pressed"]
-            pyautogui.keyDown(action_key)
-            time.sleep(1)
-            pyautogui.keyUp(action_key)
+            keypress(action_key)
             response = {"data": f"Key pressed {action_key}"}
         elif action["function"] == "capture_screen_data":
             if x1 and x2 and y1 and y2:
@@ -271,20 +267,20 @@ def get_conditionals_result(action: models.Action):
         for count, ele in enumerate(variable_conditions):
             if len(comparison_values) > count + 1:
                 conditionals_result = (
-                    conditionals_result
-                    and evaluate_conditional(
-                        variable_conditions[count],
-                        variables[(count * 2) + 1],
-                    )
+                        conditionals_result
+                        and evaluate_conditional(
+                    variable_conditions[count],
+                    variables[(count * 2) + 1],
+                )
                 )
             else:
                 conditionals_result = (
-                    conditionals_result
-                    and evaluate_conditional(
-                        variable_conditions[count],
-                        variables[(count * 2) + 1],
-                        comparison_values[count],
-                    )
+                        conditionals_result
+                        and evaluate_conditional(
+                    variable_conditions[count],
+                    variables[(count * 2) + 1],
+                    comparison_values[count],
+                )
                 )
     else:
         conditionals_result = False
@@ -315,8 +311,8 @@ def action_controller(action: models.Action):
             conditionals_true = get_conditionals_result(action)
             if "repeat" in action.get(f"{conditionals_true.lower()}_case"):
                 if (
-                    action.get(f"{conditionals_true.lower()}_case")
-                    == "sleep_and_repeat"
+                        action.get(f"{conditionals_true.lower()}_case")
+                        == "sleep_and_repeat"
                 ):
                     time.sleep(action.get("sleep_duration"))
                 num_repeats = 1
@@ -342,10 +338,8 @@ def keypress(key_input: str, duration: float = 0.05):
     """Presses the given key for a duration"""
     response = {"data": "Invalid input"}
     valid_input = pyautogui.KEYBOARD_KEYS
-    if key_input in valid_input:
-        pyautogui.keyDown(key_input)
-        time.sleep(duration)
-        pyautogui.keyUp(key_input)
+    if key_input.lower() in valid_input:
+        pyautogui.press(key_input.lower())
         response = {"data": f"Key pressed {key_input}"}
     else:
         combo_key_array = key_input.split("|")
@@ -391,9 +385,9 @@ def mouse_move(x: int, y: int, duration: float = 0.0):
 
 
 def image_search(
-    needle_file_name: str,
-    haystack_file_name: str = "",
-    percent_similarity: float = 0.9,
+        needle_file_name: str,
+        haystack_file_name: str = "",
+        percent_similarity: float = 0.9,
 ):
     """Search for 'needle' image in a 'haystack' image and return (x, y) coords"""
     needle_file_path = os.path.join(image_dir, needle_file_name)
@@ -443,7 +437,7 @@ def image_search(
 
 
 def capture_screen_data(
-    x1: int, y1: int, x2: int, y2: int, action_id: int, testing: bool = False
+        x1: int, y1: int, x2: int, y2: int, action_id: int, testing: bool = False
 ):
     """This function captures data within the region within (x1, y1) and (x2, y2)"""
     response = {"data": "Screen data not captured"}
@@ -509,8 +503,8 @@ def capture_screen_data(
                     int(word[9]),
                 )
                 if (
-                    action_id >= len(api.action_collection.json_collection)
-                    or action_id < 0
+                        action_id >= len(api.action_collection.json_collection)
+                        or action_id < 0
                 ):
                     word_action_id = None
                 else:
@@ -518,7 +512,7 @@ def capture_screen_data(
                 data_type = (
                     "text"
                     if action_id >= len(api.action_collection.json_collection)
-                    or action_id < 0
+                       or action_id < 0
                     else "button"
                 )
                 """Screen objects are data that store information from 
@@ -575,7 +569,7 @@ def capture_screen_data(
         }
         return test_result_dict
     elif (
-        action_id >= len(api.action_collection.json_collection) or action_id < 0
+            action_id >= len(api.action_collection.json_collection) or action_id < 0
     ):
         """Create new action"""
         variables = [

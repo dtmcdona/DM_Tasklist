@@ -5,8 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      shm_size: "1g"
-    shm_size: "2g"
+      shm_size: "8g"
+    shm_size: "8g"
     ports:
       - 8003:8003
     restart: always
@@ -35,8 +35,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      shm_size: "1g"
-    shm_size: "2g"
+      shm_size: "4g"
+    shm_size: "4g"
     command: celery -A core.celery_worker.celery worker --loglevel=info
     volumes:
       - ./app:/app
