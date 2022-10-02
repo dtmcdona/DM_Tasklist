@@ -191,7 +191,7 @@ def execute_celery_action(
     return celery_worker.run_action.delay(action_id)
 
 
-@app.post("/execute-action/{action_id}")
+@app.get("/execute-action/{action_id}")
 def execute_action(
     action_id: int = Path(
         None,
