@@ -3,18 +3,13 @@ This project is a basic RPA system that uses Fast API endpoints as a backend for
 sequences and streams screen data to the React.js frontend project (DM_React)
 
 # Docker setup
-1. Enter into terminal
+1. Docker compose up
    ```angular2html
-      docker compose up
+      make dcu
    ```
-2. To use the new pytest tests you need to remote into the container and run `pytest`
+2. To use the pytest tests:
    ```angular2html
-      docker ps -a
-   ```
-   Use the `dm_tasklist_app` container id with this command
-   ```angular2html
-      docker container exec -it <container_id> /bin/bash
-      pytest
+      make tests
    ```
 
 # Local system setup:
@@ -47,7 +42,7 @@ comment out or remove these from `app/core/process_controller.py`
    ```
 5. This terminal commands will run the system on your local system:
    ```angular2html
-   cd app && uvicorn core.fast_api_automation:app --host 0.0.0.0 --port 8003 --reload
+   make local
    ```
 
 # Note:

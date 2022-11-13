@@ -18,6 +18,8 @@ services:
       - LANG=C.UTF-8
     command: >
       sh -c "uvicorn core.fast_api_automation:app --host 0.0.0.0 --port 8003 --reload"
+    depends_on:
+      - redis
 
   broker:
     hostname: broker
@@ -47,3 +49,11 @@ services:
     depends_on:
       - app
       - broker
+      - redis
+
+  redis:
+    hostname: redis
+    container_name: redis
+    image: redis:6.2.7
+    ports:
+      - 6379:6379

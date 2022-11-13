@@ -1,4 +1,4 @@
-init:
+local:
 	cd app && uvicorn core.fast_api_automation:app --host 0.0.0.0 --port 8003 --reload
 
 dcu:
@@ -10,3 +10,6 @@ format:
 refresh:
 	docker compose stop
 	docker compose up
+
+tests:
+	sudo docker compose run celery_worker pytest
