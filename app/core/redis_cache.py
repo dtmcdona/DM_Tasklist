@@ -1,3 +1,8 @@
+"""
+Currently, redis is only used for storing and retrieving the result of
+celery workers.  This is mainly used by the Task Manager to offload
+more expensive image processing to celery workers.
+"""
 import redis
 
 
