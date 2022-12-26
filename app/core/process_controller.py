@@ -1,3 +1,13 @@
+"""
+Process Controller
+    This is the main logic for each different actions with a display.
+    It typically uses a xvfb virtual display for pyautogui to operate
+    either locally or in a docker container.  Screen data is captured
+    using cv2 and pyterract with a screenshot.  Screen data then can
+    be compared with different conditions and perform a result.  This
+    can also be used in conjunction with a Task Manager to perform an
+    ordered or re-ordered list of actions in a task.
+"""
 import base64
 import datetime
 import json
@@ -14,8 +24,8 @@ import enchant
 import numpy as np
 import pytesseract
 
-from . import fast_api_automation as api
-from . import models, random_mouse, constants
+from core import fast_api_endpoints as api
+from core import models, random_mouse, constants
 
 """Virtual display setup has to be setup before pyautogui is imported"""
 import Xlib.display
@@ -88,7 +98,9 @@ def evaluate_conditional(condition, variable_value, comparison_value=None):
     capture_screen_data action"""
     if condition not in constants.CONDITIONALS:
         pass
-    if comparison_value:
+    if condition in ("greater_than", "less_than", "equals"):
+        if not comparison_value:
+            return False
         if condition == "greater_than":
             if variable_value > comparison_value:
                 return True
@@ -113,9 +125,9 @@ def evaluate_conditional(condition, variable_value, comparison_value=None):
         return True
     elif condition == "if" or condition == "if_not" and variable_value:
         return False
-    if "if_image_present":
+    if condition == "if_image_present":
         """Check to see if image is present before doing action"""
-        x, y = image_search(variable_value)
+        x, y = image_search(variable_value, comparison_value, False)
         if x == -1 or y == -1:
             return False
         return True
@@ -146,7 +158,7 @@ def process_action(action: models.Action):
         )
         if action.get("images") not in [[], None]:
             needle_file_name = action["images"][0]
-            if action.get("images")[1] not in ["", None]:
+            if len(action.get("images")) > 1 and action.get("images")[1] not in ["", None]:
                 haystack_file_name = action["images"][1]
             else:
                 haystack_file_name = ""
@@ -155,6 +167,7 @@ def process_action(action: models.Action):
                 needle_file_name=needle_file_name,
                 haystack_file_name=haystack_file_name,
                 percent_similarity=percent_similarity,
+                delete_haystack_file=False
             )
         if action.get("x2") not in [-1, None] and action.get("y2") not in [
             -1,
@@ -249,7 +262,7 @@ def process_action(action: models.Action):
     return response
 
 
-def get_conditionals_result(action: models.Action):
+def get_conditionals_result(action: models.Action, screenshot_file: str = None):
     conditionals_result = True
     image_conditions = action.get("image_conditions")
     variable_conditions = action.get("variable_conditions")
@@ -257,8 +270,13 @@ def get_conditionals_result(action: models.Action):
         """Image conditionals are specific to png information"""
         images = action.get("images")
         for condition in image_conditions:
+            needle_file_name = images[0]
+            if images[1] not in ["", None]:
+                haystack_file_name = action["images"][1]
+            else:
+                haystack_file_name = screenshot_file
             conditionals_result = conditionals_result and evaluate_conditional(
-                condition, images
+                condition, needle_file_name, haystack_file_name
             )
     elif variable_conditions:
         """Variable conditionals are specific to OCR values compared to user input"""
@@ -267,27 +285,27 @@ def get_conditionals_result(action: models.Action):
         for count, ele in enumerate(variable_conditions):
             if len(comparison_values) > count + 1:
                 conditionals_result = (
-                        conditionals_result
-                        and evaluate_conditional(
-                    variable_conditions[count],
-                    variables[(count * 2) + 1],
-                )
+                    conditionals_result
+                    and evaluate_conditional(
+                        variable_conditions[count],
+                        variables[(count * 2) + 1],
+                    )
                 )
             else:
                 conditionals_result = (
-                        conditionals_result
-                        and evaluate_conditional(
-                    variable_conditions[count],
-                    variables[(count * 2) + 1],
-                    comparison_values[count],
-                )
+                    conditionals_result
+                    and evaluate_conditional(
+                        variable_conditions[count],
+                        variables[(count * 2) + 1],
+                        comparison_values[count],
+                    )
                 )
     else:
         conditionals_result = False
     return conditionals_result
 
 
-def action_controller(action: models.Action):
+def action_controller(action: models.Action, prefetched_condition_result: bool = None):
     """This controller manages different outcomes of the action's conditional
     and then processes the given action"""
     if action.get("function") not in constants.ACTIONS:
@@ -308,18 +326,21 @@ def action_controller(action: models.Action):
         if check_conditional:
             """Capture and analyze screen information then process conditional case"""
             response = process_action(action)
-            conditionals_true = get_conditionals_result(action)
-            if "repeat" in action.get(f"{conditionals_true.lower()}_case"):
+            if prefetched_condition_result:
+                conditionals_true = prefetched_condition_result
+            else:
+                conditionals_true = get_conditionals_result(action)
+            if "repeat" in action.get(f"{conditionals_true}_case".lower()):
                 if (
-                        action.get(f"{conditionals_true.lower()}_case")
+                        action.get(f"{conditionals_true}_case".lower())
                         == "sleep_and_repeat"
                 ):
                     time.sleep(action.get("sleep_duration"))
                 num_repeats = 1
             else:
-                if action.get(f"{conditionals_true.lower()}_case") == "sleep":
+                if action.get(f"{conditionals_true}_case".lower()) == "sleep":
                     time.sleep(action.get("sleep_duration"))
-                response = action.get(f"{conditionals_true.lower()}_case")
+                response = {"data": action.get(f"{conditionals_true}_case".lower())}
                 break
         else:
             """Action without conditional"""
@@ -330,7 +351,8 @@ def action_controller(action: models.Action):
         elif num_repeats > 0:
             num_repeats = num_repeats - 1
             if num_repeats <= 0:
-                repeat = False
+                break
+
     return response
 
 
@@ -388,8 +410,10 @@ def image_search(
         needle_file_name: str,
         haystack_file_name: str = "",
         percent_similarity: float = 0.9,
+        delete_haystack_file: bool = True
 ):
     """Search for 'needle' image in a 'haystack' image and return (x, y) coords"""
+    print(needle_file_name)
     needle_file_path = os.path.join(image_dir, needle_file_name)
     needle = cv2.imread(needle_file_path, cv2.IMREAD_UNCHANGED)
     grayscale_needle = cv2.cvtColor(needle, cv2.COLOR_BGR2GRAY)
@@ -415,7 +439,7 @@ def image_search(
     """Keep track of all matches and identify unique cases"""
     matches = []
     """Delete haystack image since it is a representation of current screen"""
-    if os.path.exists(haystack_file_path):
+    if delete_haystack_file and os.path.exists(haystack_file_path):
         os.remove(haystack_file_path)
     if len(xloc) > 0:
         # logging.debug("There are {0} total matches in the haystack.".format(len(xloc)))
@@ -503,7 +527,7 @@ def capture_screen_data(
                     int(word[9]),
                 )
                 if (
-                        action_id >= len(api.action_collection.json_collection)
+                        action_id >= len(api.storage.action_collection.json_collection)
                         or action_id < 0
                 ):
                     word_action_id = None
@@ -511,7 +535,7 @@ def capture_screen_data(
                     word_action_id = action_id
                 data_type = (
                     "text"
-                    if action_id >= len(api.action_collection.json_collection)
+                    if action_id >= len(api.storage.action_collection.json_collection)
                        or action_id < 0
                     else "button"
                 )
@@ -569,7 +593,7 @@ def capture_screen_data(
         }
         return test_result_dict
     elif (
-            action_id >= len(api.action_collection.json_collection) or action_id < 0
+            action_id >= len(api.storage.action_collection.json_collection) or action_id < 0
     ):
         """Create new action"""
         variables = [
@@ -660,3 +684,10 @@ def screen_shot():
         os.remove(screenshot_path)
     response = {"data": b64_string}
     return response
+
+
+def save_screenshot():
+    file_name = f"{uuid.uuid4()}.png"
+    haystack_file_path = os.path.join(image_dir, file_name)
+    pyautogui.screenshot(haystack_file_path)
+    return file_name

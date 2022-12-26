@@ -1,8 +1,27 @@
+"""
+Models:
+    Pydantic models
+        - Actions - All actions that can be executed by the process controller
+        - Tasks - An ordered collection of actions to execute with a configuration
+        - Schedules - An ordered collection of tasks to execute
+        - Screen Objects - Screen objects represent text, buttons, or GUI elements
+        - Image - An image from the xvfb virtual display
+        - Json Data - Abstract object for storing JSON data
+        - Source - Represents an abstract data source stored in the file system
+        - Captured Data - Represents any form of data that can be captured as relevant data
+            for an action or task
+        - Task Rank - Used to determine how efficient it completes a goal
+        - Mouse position - Might be used in the future to track relative mouse x and y
+            coordinates for different resolutions
+    JSON resources
+        - All CRUD operations
+    JSON collection resources
+        - All CRUD operations
+"""
 import datetime
 import json
 import logging
 import os
-import sys
 import uuid
 from os.path import exists
 from pathlib import Path
@@ -45,6 +64,7 @@ class Action(BaseModel):
     key_pressed: Optional[str] = None
     true_case: Optional[str] = "conditions_true"
     false_case: Optional[str] = "conditions_false"
+    skip_to_name: Optional[str] = None
     error_case: Optional[str] = "error"
     num_repeats: Optional[int] = 0
     random_path: Optional[bool] = False
@@ -59,6 +79,12 @@ class Task(BaseModel):
     name: str
     task_dependency_id: Optional[int] = None
     action_id_list: List[int] = []
+    job_creation_delta_time: Optional[float] = 0.5
+    max_num_celery_jobs: Optional[int] = 10
+    conditionals: Optional[List[Json]] = []
+    early_result_available: Optional[List[bool]] = []
+    fastest_timeline: Optional[List[float]] = []
+    last_conditional_results: Optional[List[Json]] = []
 
 
 class Schedule(BaseModel):

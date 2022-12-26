@@ -33,9 +33,9 @@ class TestProcessController(ModelMixin):
         )
 
     def test_action_controller(self):
-        self.generate_actions_without_condition()
-        for action_id in self.action_collection.to_json:
-            action = self.action_collection.get_collection(int(action_id))
+        action_collection = self.get_action_collection()
+        for action_id in action_collection:
+            action = self.get_action(int(action_id))
             if action.get("function") == "capture_screen_data":
                 continue
             response = process_controller.action_controller(action)

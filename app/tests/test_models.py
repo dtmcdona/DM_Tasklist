@@ -6,6 +6,7 @@ from core.models import Action, Task, Schedule, JsonCollectionResource
 
 class TestModels:
     """Used to test actions, tasks, and schedule lists"""
+
     test_action1 = {
         "id": 0,
         "name": "test_move_to",

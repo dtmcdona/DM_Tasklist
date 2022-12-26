@@ -9,13 +9,12 @@ Fast API Endpoints
             2. Execute Tasks
             3. Execute Schedules
 """
-import logging
-
 from core import api_resources, celery_worker, models, process_controller
 
 from fastapi import FastAPI, Path
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core import task_manager
 
 app = FastAPI()
 
@@ -121,7 +120,7 @@ def task_add_action(task_name: str, new_action: models.Action):
                 response = {
                     "data": "Action has been added to the task collection."
                 }
-    logging.debug(response)
+    storage.logging.debug(response)
     return response
 
 
@@ -129,14 +128,12 @@ def task_add_action(task_name: str, new_action: models.Action):
 def execute_task(task_id: int):
     """Executes a task by looping through the action collection and executing each action"""
     task = storage.get_task(task_id)
-    action_id_list = task.get("action_id_list")
-    for action_id in action_id_list:
-        execute_action(action_id)
-    if action_id_list in [None, []]:
+    if not task or task.get("action_id_list") in [None, []]:
         response = {"data": "Task not found"}
     else:
-        response = {"data": "Task complete"}
-    logging.debug(response)
+        task_manager_obj = task_manager.TaskManager(task, False)
+        response = task_manager_obj.start_playback()
+    storage.logging.debug(response)
     return response
 
 
@@ -171,7 +168,7 @@ def schedule_add_task(schedule_name: str, task_name: str):
                 task_id = task.get("id")
     if task_id is None:
         response = {"data": "Task does not exist."}
-        logging.debug(response)
+        storage.logging.debug(response)
         return response
     schedules = storage.get_schedule_collection()
     if schedules not in [None, {}]:
@@ -183,7 +180,7 @@ def schedule_add_task(schedule_name: str, task_name: str):
                     task_id
                 )
                 response = {"data": "Added task to schedule."}
-    logging.debug(response)
+    storage.logging.debug(response)
     return response
 
 
@@ -211,7 +208,7 @@ def execute_action(
     if action:
         response = process_controller.action_controller(action)
 
-    logging.debug(response)
+    storage.logging.debug(response)
     return response
 
 
