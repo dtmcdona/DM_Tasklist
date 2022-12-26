@@ -1,3 +1,14 @@
+"""
+Actions:
+    All possible actions that can be performed by the process_controller
+
+Conditionals:
+    All possible conditions with analyzing the screen data
+
+Results:
+    All possible results of conditions being True/False
+"""
+
 ACTIONS = [
     "click",
     "click_image",
