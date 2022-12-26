@@ -1,7 +1,12 @@
+"""
+Random mouse creates more human and randomized paths for moving the mouse,
+clicking a randomized location within a range, and slightly moving the mouse
+around.
+"""
 import random
 import time
 
-from . import process_controller
+from core import process_controller
 
 
 def random_move(x: int, y: int):
