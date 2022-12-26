@@ -1,5 +1,11 @@
 version: "3.7"
 
+x-services-volume:
+  &services-volume
+  type: bind
+  source: ./app
+  target: /app
+
 services:
   app:
     build:
@@ -11,7 +17,7 @@ services:
       - 8003:8003
     restart: always
     volumes:
-      - ./app:/app
+      - *services-volume
     environment:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - LC_ALL=C.UTF-8
@@ -41,7 +47,7 @@ services:
     shm_size: "4g"
     command: celery -A core.celery_worker.celery worker --loglevel=info
     volumes:
-      - ./app:/app
+      - *services-volume
     environment:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - LC_ALL=C.UTF-8
