@@ -1,6 +1,17 @@
+"""
+Fast API Endpoints
+    These endpoints are used to:
+        - CRUD JSON Data
+        - Open the browser within the xvfb virtual display
+        - Capture screen data from the xvfb virtual display
+        - Interact with the process controller:
+            1. Execute Actions
+            2. Execute Tasks
+            3. Execute Schedules
+"""
 import logging
 
-from . import celery_worker, models, process_controller
+from core import api_resources, celery_worker, models, process_controller
 
 from fastapi import FastAPI, Path
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,11 +27,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-action_collection = models.JsonCollectionResource(models.Action)
-task_collection = models.JsonCollectionResource(models.Task)
-schedule_collection = models.JsonCollectionResource(models.Schedule)
-logging.basicConfig(level=logging.WARNING)
-
+storage = api_resources.APICollections()
 
 @app.get("/")
 def home():
@@ -37,7 +44,7 @@ def open_broswer(url: str):
 @app.get("/get-actions/")
 def get_actions():
     """Gets all stored actions"""
-    return action_collection.json_collection
+    return storage.get_action_collection()
 
 
 @app.get("/get-action/{action_id}")
@@ -48,31 +55,31 @@ def get_action(
     )
 ):
     """Returns an action by id"""
-    return action_collection.get_collection(action_id)
+    return storage.get_action(action_id)
 
 
 @app.post("/add-action")
 def add_action(new_action: models.Action):
     """Adds a new action to storage"""
-    return action_collection.add_collection(new_action)
+    return storage.add_action(new_action)
 
 
 @app.post("/update-action/{action_id}")
 def update_action(action_id: int, new_action: models.Action):
     """Updates a previous action with new information"""
-    return action_collection.update_collection(action_id, new_action)
+    return storage.update_action(action_id, new_action)
 
 
 @app.get("/delete-action/{action_id}")
 def delete_action(action_id: int):
     """Deletes an action by id"""
-    return action_collection.delete_collection(action_id)
+    return storage.delete_action(action_id)
 
 
 @app.get("/get-tasks")
 def get_tasks():
     """Gets all stored tasks"""
-    return task_collection.json_collection
+    return storage.get_task_collection()
 
 
 @app.get("/get-task/{task_name}")
@@ -82,31 +89,33 @@ def get_task(
     )
 ):
     """Returns a task by name"""
-    return task_collection.get_collection_by_name(task_name)
+    return storage.get_task_by_name(task_name)
 
 
 @app.post("/add-task")
 def add_task(task: models.Task):
     """Adds a new task to storage"""
-    return task_collection.add_collection(task)
+    return storage.add_task(task)
 
 
 @app.post("/tasks-add-action/{task_name}")
 def task_add_action(task_name: str, new_action: models.Action):
     """Adds a new action to task"""
-    action_response = action_collection.add_collection(new_action)
+    action_response = storage.add_action(new_action)
     new_action_id = None
-    if action_collection.json_collection not in [None, {}]:
-        for key in action_collection.json_collection:
-            if new_action.name == action_collection.json_collection[key].get(
+    actions = storage.get_action_collection()
+    if actions not in [None, {}]:
+        for index, action in actions:
+            if new_action.name == action.get(
                 "name"
             ):
-                new_action_id = action_collection.json_collection[key].get("id")
+                new_action_id = action.get("id")
     response = {"data": f"Task {task_name} does not exist."}
-    if task_collection.json_collection not in [None, {}]:
-        for key in task_collection.json_collection:
-            if task_name == task_collection.json_collection[key].get("name"):
-                task_collection.json_collection[key]["action_id_list"].append(
+    tasks = storage.get_task_collection()
+    if tasks not in [None, {}]:
+        for key, task in tasks:
+            if task_name == task.get("name"):
+                task["action_id_list"].append(
                     new_action_id
                 )
                 response = {
@@ -119,12 +128,8 @@ def task_add_action(task_name: str, new_action: models.Action):
 @app.get("/execute-task/{task_id}")
 def execute_task(task_id: int):
     """Executes a task by looping through the action collection and executing each action"""
-    task = task_collection.json_collection[str(task_id)]
-    action_id_list = (
-        []
-        if task.get("action_id_list") in [None, []]
-        else task["action_id_list"]
-    )
+    task = storage.get_task(task_id)
+    action_id_list = task.get("action_id_list")
     for action_id in action_id_list:
         execute_action(action_id)
     if action_id_list in [None, []]:
@@ -138,41 +143,43 @@ def execute_task(task_id: int):
 @app.get("/get-schedules/")
 def get_schedules():
     """Gets all stored schedules"""
-    return schedule_collection.json_collection
+    return storage.get_schedule_collection()
 
 
 @app.get("/get-schedule/{schedule_name}")
 def get_schedule(
     schedule_name: str = Path(
         1,
-        description="The ID of the schedule you would like to view.",
+        description="The name of the schedule you would like to view.",
     )
 ):
     """Returns a schedule by name"""
-    return schedule_collection.get_collection_by_name(schedule_name)
+    return storage.get_schedule_by_name(schedule_name)
 
 
-@app.post("/schedule-add-task/{schedule_name}/{task_collection_name}")
-def schedule_add_task(schedule_name: str, task_collection_name: str):
+@app.post("/schedule-add-task/{schedule_name}/{task_name}")
+def schedule_add_task(schedule_name: str, task_name: str):
     """Adds a task to a schedule"""
     response = {"data": "Schedule does not exist."}
     task_id = None
-    if task_collection.json_collection not in [None, {}]:
-        for key in task_collection.json_collection:
-            if task_collection_name == task_collection.json_collection[key].get(
+    tasks = storage.get_task_collection()
+    if tasks not in [None, {}]:
+        for index, task in tasks:
+            if task_name == task.get(
                 "name"
             ):
-                task_id = task_collection.json_collection[key].get("id")
+                task_id = task.get("id")
     if task_id is None:
         response = {"data": "Task does not exist."}
         logging.debug(response)
         return response
-    if schedule_collection.json_collection not in [None, {}]:
-        for key in schedule_collection.json_collection:
-            if schedule_name == schedule_collection.json_collection[key].get(
+    schedules = storage.get_schedule_collection()
+    if schedules not in [None, {}]:
+        for index, schedule in schedules:
+            if schedule_name == schedule.get(
                 "name"
             ):
-                schedule_collection.json_collection[key]["task_id_list"].append(
+                schedule["task_id_list"].append(
                     task_id
                 )
                 response = {"data": "Added task to schedule."}
@@ -200,10 +207,9 @@ def execute_action(
 ):
     """This function only works with Fast API running on your local machine since docker containers run headless"""
     response = {"data": f"Error with action_id:{action_id}"}
-    if action_collection.json_collection.get(str(action_id)):
-        action = action_collection.json_collection.get(str(action_id))
-        if action:
-            response = process_controller.action_controller(action)
+    action = storage.get_action(action_id)
+    if action:
+        response = process_controller.action_controller(action)
 
     logging.debug(response)
     return response

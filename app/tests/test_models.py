@@ -58,7 +58,15 @@ class TestModels:
         self.action_collection.load_collection()
         self.task_collection.load_collection()
         self.schedule_collection.load_collection()
-        assert set(self.action_collection.get_collection(0)) >= set(self.test_action1)
-        assert set(self.action_collection.get_collection(1)) >= set(self.test_action2)
-        assert set(self.task_collection.get_collection(0)) >= set(self.test_task)
-        assert set(self.schedule_collection.get_collection(0)) >= set(self.test_shedule)
+        assert set(self.action_collection.get_collection(0)) >= set(
+            self.test_action1
+        )
+        assert set(self.action_collection.get_collection(1)) >= set(
+            self.test_action2
+        )
+        assert set(self.task_collection.get_collection(0)) >= set(
+            self.test_task
+        )
+        assert set(self.schedule_collection.get_collection(0)) >= set(
+            self.test_shedule
+        )
