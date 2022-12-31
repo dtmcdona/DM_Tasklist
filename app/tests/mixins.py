@@ -54,7 +54,7 @@ class ModelMixin:
             models.Action, True
         )
         cls.task_collection = models.JsonCollectionResource(models.Task, True)
-        fast_api_endpoints.storage = api_resources.APICollections(
+        api_resources.storage = api_resources.APICollections(
             action_collection=cls.action_collection,
             task_collection=cls.task_collection,
             logging_level=DEBUG,
@@ -238,32 +238,32 @@ class ModelMixin:
 
     @staticmethod
     def add_action(action) -> dict:
-        return fast_api_endpoints.storage.add_action(action)
+        return api_resources.storage.add_action(action)
 
     @staticmethod
     def get_action(action_id) -> models.Action:
-        return fast_api_endpoints.storage.get_action(action_id)
+        return api_resources.storage.get_action(action_id)
 
     @staticmethod
     def get_action_collection():
-        return fast_api_endpoints.storage.get_action_collection()
+        return api_resources.storage.get_action_collection()
 
     @staticmethod
     def update_action(action_id, action) -> models.Action:
-        return fast_api_endpoints.storage.update_action(action_id, action)
+        return api_resources.storage.update_action(action_id, action)
 
     @staticmethod
     def get_task(task_id) -> models.Task:
-        return fast_api_endpoints.storage.get_task(task_id)
+        return api_resources.storage.get_task(task_id)
 
     @staticmethod
     def add_task(task) -> dict:
-        return fast_api_endpoints.storage.add_task(task)
+        return api_resources.storage.add_task(task)
 
     @staticmethod
     def update_task(task_id, task) -> models.Task:
-        return fast_api_endpoints.storage.update_task(task_id, task)
+        return api_resources.storage.update_task(task_id, task)
 
     @staticmethod
     def get_task_collection():
-        return fast_api_endpoints.storage.get_task_collection()
+        return api_resources.storage.get_task_collection()

@@ -4,8 +4,8 @@ Celery workers:
 """
 from celery import Celery
 
-from core import fast_api_endpoints as api
-from core import models, process_controller, redis_cache
+from . import fast_api_endpoints as api
+from . import models, process_controller, redis_cache
 
 celery = Celery(__name__, broker="amqp://user:password@broker:5672")
 

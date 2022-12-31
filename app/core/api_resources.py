@@ -1,6 +1,6 @@
 import logging
 
-from core import models
+from . import models
 
 
 class APICollections:
@@ -83,3 +83,5 @@ class APICollections:
 
     def delete_schedule(self, schedule_id):
         return self.schedule_collection.delete_collection(schedule_id)
+
+storage = APICollections()

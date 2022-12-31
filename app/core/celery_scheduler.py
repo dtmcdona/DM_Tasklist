@@ -20,7 +20,7 @@ import uuid
 import datetime as dt
 from collections import deque
 
-from core import celery_worker, models, process_controller, redis_cache
+from . import celery_worker, models, process_controller, redis_cache
 
 
 class CeleryScheduler:
@@ -58,8 +58,11 @@ class CeleryScheduler:
     def get_final_result(self):
         result = None
         while result is None:
-            result = redis_cache.get_condition_result(self.cache_key_list[-1])
-            time.sleep(0.01)
+            if len(self.cache_key_list) > 0:
+                result = redis_cache.get_condition_result(self.cache_key_list[-1])
+                time.sleep(0.01)
+            else:
+                break
 
         return result
 

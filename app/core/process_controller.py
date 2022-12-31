@@ -24,8 +24,8 @@ import enchant
 import numpy as np
 import pytesseract
 
-from core import fast_api_endpoints as api
-from core import models, random_mouse, constants
+from . import fast_api_endpoints as api
+from . import api_resources, models, random_mouse, constants
 
 """Virtual display setup has to be setup before pyautogui is imported"""
 import Xlib.display
@@ -527,7 +527,7 @@ def capture_screen_data(
                     int(word[9]),
                 )
                 if (
-                        action_id >= len(api.storage.action_collection.json_collection)
+                        action_id >= len(api_resources.storage.action_collection.json_collection)
                         or action_id < 0
                 ):
                     word_action_id = None
@@ -535,7 +535,7 @@ def capture_screen_data(
                     word_action_id = action_id
                 data_type = (
                     "text"
-                    if action_id >= len(api.storage.action_collection.json_collection)
+                    if action_id >= len(api_resources.storage.action_collection.json_collection)
                        or action_id < 0
                     else "button"
                 )
@@ -593,7 +593,7 @@ def capture_screen_data(
         }
         return test_result_dict
     elif (
-            action_id >= len(api.storage.action_collection.json_collection) or action_id < 0
+            action_id >= len(api_resources.storage.action_collection.json_collection) or action_id < 0
     ):
         """Create new action"""
         variables = [

@@ -81,7 +81,7 @@ class Task(BaseModel):
     action_id_list: List[int] = []
     job_creation_delta_time: Optional[float] = 0.5
     max_num_celery_jobs: Optional[int] = 10
-    conditionals: Optional[List[Json]] = []
+    conditionals: Optional[List[int]] = []
     early_result_available: Optional[List[bool]] = []
     fastest_timeline: Optional[List[float]] = []
     last_conditional_results: Optional[List[Json]] = []

@@ -13,9 +13,8 @@ Task Manager
 import logging
 import datetime as dt
 
-from core import process_controller, celery_scheduler
-from core.fast_api_endpoints import storage
-from core.models import Task
+from . import api_resources, process_controller, celery_scheduler
+from .models import Task
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -29,7 +28,7 @@ class TaskManager:
         self.status = "Task manager created"
         self.task = task
         self.actions = [
-            storage.action_collection.get_collection(action_id)
+            api_resources.storage.action_collection.get_collection(action_id)
             for action_id in self.task.action_id_list
         ]
         self.config = (
@@ -75,7 +74,7 @@ class TaskManager:
         new_task = self.task.dict()
         new_task.update(self.config)
         new_task_obj = Task(**new_task)
-        self.task = storage.update_task(self.task.id, new_task_obj)
+        self.task = api_resources.storage.update_task(self.task.id, new_task_obj)
 
     def start_playback(self):
         """Execute all actions in a task then save the config"""

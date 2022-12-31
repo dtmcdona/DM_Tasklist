@@ -1,5 +1,5 @@
 import pytest
-from core import fast_api_endpoints, models, task_manager
+from core import api_resources, fast_api_endpoints, models, task_manager
 from .mixins import ModelMixin
 
 
@@ -50,6 +50,6 @@ class TestTaskManager(ModelMixin):
         self.update_action(0, self.test_action_obj)
         task_manager_obj = self.expect_playback_success()
         expected_actions_processed = {
-            str(i): 1 if i == 0 or i == 8 else 0 for i in range(9)
+            str(i): 1 if i == 0 or i == last_action_id else 0 for i in range(9)
         }
         assert task_manager_obj.actions_processed == expected_actions_processed

@@ -6,7 +6,7 @@ around.
 import random
 import time
 
-from core import process_controller
+from . import process_controller
 
 
 def random_move(x: int, y: int):

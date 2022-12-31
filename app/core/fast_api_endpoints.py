@@ -9,7 +9,8 @@ Fast API Endpoints
             2. Execute Tasks
             3. Execute Schedules
 """
-from core import api_resources, celery_worker, models, process_controller, task_manager
+from . import api_resources, celery_worker, models, process_controller
+from . import task_manager as manager
 
 from fastapi import FastAPI, Path
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,7 +26,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-storage = api_resources.APICollections()
 
 @app.get("/")
 def home():
@@ -42,7 +42,7 @@ def open_broswer(url: str):
 @app.get("/get-actions/")
 def get_actions():
     """Gets all stored actions"""
-    return storage.get_action_collection()
+    return api_resources.storage.get_action_collection()
 
 
 @app.get("/get-action/{action_id}")
@@ -53,31 +53,31 @@ def get_action(
     )
 ):
     """Returns an action by id"""
-    return storage.get_action(action_id)
+    return api_resources.storage.get_action(action_id)
 
 
 @app.post("/add-action")
 def add_action(new_action: models.Action):
-    """Adds a new action to storage"""
-    return storage.add_action(new_action)
+    """Adds a new action to api_resources.storage"""
+    return api_resources.storage.add_action(new_action)
 
 
 @app.post("/update-action/{action_id}")
 def update_action(action_id: int, new_action: models.Action):
     """Updates a previous action with new information"""
-    return storage.update_action(action_id, new_action)
+    return api_resources.storage.update_action(action_id, new_action)
 
 
 @app.get("/delete-action/{action_id}")
 def delete_action(action_id: int):
     """Deletes an action by id"""
-    return storage.delete_action(action_id)
+    return api_resources.storage.delete_action(action_id)
 
 
 @app.get("/get-tasks")
 def get_tasks():
     """Gets all stored tasks"""
-    return storage.get_task_collection()
+    return api_resources.storage.get_task_collection()
 
 
 @app.get("/get-task/{task_name}")
@@ -87,21 +87,21 @@ def get_task(
     )
 ):
     """Returns a task by name"""
-    return storage.get_task_by_name(task_name)
+    return api_resources.storage.get_task_by_name(task_name)
 
 
 @app.post("/add-task")
 def add_task(task: models.Task):
-    """Adds a new task to storage"""
-    return storage.add_task(task)
+    """Adds a new task to api_resources.storage"""
+    return api_resources.storage.add_task(task)
 
 
 @app.post("/tasks-add-action/{task_name}")
 def task_add_action(task_name: str, new_action: models.Action):
     """Adds a new action to task"""
-    action_response = storage.add_action(new_action)
+    action_response = api_resources.storage.add_action(new_action)
     new_action_id = None
-    actions = storage.get_action_collection()
+    actions = api_resources.storage.get_action_collection()
     if actions not in [None, {}]:
         for index, action in actions:
             if new_action.name == action.get(
@@ -109,7 +109,7 @@ def task_add_action(task_name: str, new_action: models.Action):
             ):
                 new_action_id = action.get("id")
     response = {"data": f"Task {task_name} does not exist."}
-    tasks = storage.get_task_collection()
+    tasks = api_resources.storage.get_task_collection()
     if tasks not in [None, {}]:
         for key, task in tasks:
             if task_name == task.get("name"):
@@ -119,27 +119,27 @@ def task_add_action(task_name: str, new_action: models.Action):
                 response = {
                     "data": "Action has been added to the task collection."
                 }
-    storage.logging.debug(response)
+    api_resources.storage.logging.debug(response)
     return response
 
 
 @app.get("/execute-task/{task_id}")
 def execute_task(task_id: int):
     """Executes a task by looping through the action collection and executing each action"""
-    task = storage.get_task(task_id)
+    task = api_resources.storage.get_task(task_id)
     if not task or task.get("action_id_list") in [None, []]:
         response = {"data": "Task not found"}
     else:
-        task_manager_obj = task_manager.TaskManager(task, False)
+        task_manager_obj = manager.TaskManager(task, False)
         response = task_manager_obj.start_playback()
-    storage.logging.debug(response)
+    api_resources.storage.logging.debug(response)
     return response
 
 
 @app.get("/get-schedules/")
 def get_schedules():
     """Gets all stored schedules"""
-    return storage.get_schedule_collection()
+    return api_resources.storage.get_schedule_collection()
 
 
 @app.get("/get-schedule/{schedule_name}")
@@ -150,7 +150,7 @@ def get_schedule(
     )
 ):
     """Returns a schedule by name"""
-    return storage.get_schedule_by_name(schedule_name)
+    return api_resources.storage.get_schedule_by_name(schedule_name)
 
 
 @app.post("/schedule-add-task/{schedule_name}/{task_name}")
@@ -158,7 +158,7 @@ def schedule_add_task(schedule_name: str, task_name: str):
     """Adds a task to a schedule"""
     response = {"data": "Schedule does not exist."}
     task_id = None
-    tasks = storage.get_task_collection()
+    tasks = api_resources.storage.get_task_collection()
     if tasks not in [None, {}]:
         for index, task in tasks:
             if task_name == task.get(
@@ -167,9 +167,9 @@ def schedule_add_task(schedule_name: str, task_name: str):
                 task_id = task.get("id")
     if task_id is None:
         response = {"data": "Task does not exist."}
-        storage.logging.debug(response)
+        api_resources.storage.logging.debug(response)
         return response
-    schedules = storage.get_schedule_collection()
+    schedules = api_resources.storage.get_schedule_collection()
     if schedules not in [None, {}]:
         for index, schedule in schedules:
             if schedule_name == schedule.get(
@@ -179,7 +179,7 @@ def schedule_add_task(schedule_name: str, task_name: str):
                     task_id
                 )
                 response = {"data": "Added task to schedule."}
-    storage.logging.debug(response)
+    api_resources.storage.logging.debug(response)
     return response
 
 
@@ -203,11 +203,11 @@ def execute_action(
 ):
     """This function only works with Fast API running on your local machine since docker containers run headless"""
     response = {"data": f"Error with action_id:{action_id}"}
-    action = storage.get_action(action_id)
+    action = api_resources.storage.get_action(action_id)
     if action:
         response = process_controller.action_controller(action)
 
-    storage.logging.debug(response)
+    api_resources.storage.logging.debug(response)
     return response
 
 

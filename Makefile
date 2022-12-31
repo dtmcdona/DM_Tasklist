@@ -5,11 +5,20 @@ dcu:
 	sudo docker compose up
 
 format:
-	black --line-length 80 app/core
+	black --line-length 80 app/core/api_resources.py
+	black --line-length 80 app/core/celery_scheduler.py
+	black --line-length 80 app/core/celery_worker.py
+	black --line-length 80 app/core/constants.py
+	black --line-length 80 app/core/models.py
+	black --line-length 80 app/core/random_mouse.py
+	black --line-length 80 app/core/redis_cache.py
+	black --line-length 80 app/core/settings.py
+	black --line-length 80 app/core/task_manager.py
+	black --line-length 80 app/tests/*
 
 refresh:
 	docker compose stop
 	docker compose up
 
 tests:
-	sudo docker compose run celery_worker pytest
+	sudo docker compose run app pytest
