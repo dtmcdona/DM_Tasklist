@@ -1,5 +1,5 @@
 local:
-	cd app && uvicorn core.fast_api_automation:app --host 0.0.0.0 --port 8003 --reload
+	cd app && uvicorn core.fast_api_endpoints:app --host 0.0.0.0 --port 8003 --reload
 
 dcu:
 	sudo docker compose up
