@@ -9,12 +9,11 @@ Fast API Endpoints
             2. Execute Tasks
             3. Execute Schedules
 """
-from core import api_resources, celery_worker, models, process_controller
+from core import api_resources, celery_worker, models, process_controller, task_manager
 
 from fastapi import FastAPI, Path
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core import task_manager
 
 app = FastAPI()
 

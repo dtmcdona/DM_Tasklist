@@ -3,7 +3,7 @@ Process Controller
     This is the main logic for each different actions with a display.
     It typically uses a xvfb virtual display for pyautogui to operate
     either locally or in a docker container.  Screen data is captured
-    using cv2 and pyterract with a screenshot.  Screen data then can
+    using cv2 and pytesseract with a screenshot.  Screen data then can
     be compared with different conditions and perform a result.  This
     can also be used in conjunction with a Task Manager to perform an
     ordered or re-ordered list of actions in a task.
