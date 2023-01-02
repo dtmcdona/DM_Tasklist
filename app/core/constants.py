@@ -8,8 +8,9 @@ Conditionals:
 Results:
     All possible results of conditions being True/False
 """
+from typing import List
 
-ACTIONS = [
+ACTIONS: List[str] = [
     "click",
     "click_image",
     "move_to",
@@ -18,7 +19,7 @@ ACTIONS = [
     "capture_screen_data",
 ]
 
-CONDITIONALS = [
+CONDITIONALS: List[str] = [
     "greater_than",
     "less_than",
     "equals",
@@ -27,7 +28,7 @@ CONDITIONALS = [
     "if_image_present",
 ]
 
-RESULTS = [
+RESULTS: List[str] = [
     "continue",
     "set_action_name",
     "skip_to_name",

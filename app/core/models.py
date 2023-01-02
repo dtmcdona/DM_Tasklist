@@ -25,7 +25,7 @@ import os
 import uuid
 from os.path import exists
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Any
 
 from pydantic import BaseModel
 from pydantic.types import Json
@@ -185,7 +185,7 @@ class JsonResource:
     def __init__(self, resource_dict):
         self.obj, self.obj_dir = self.dict_to_model(resource_dict)
 
-    def dict_to_model(self, input_dict: dict):
+    def dict_to_model(self, input_dict: dict) -> Any:
         all_models = {
             "Image": Image.get_field_names(),
             "ScreenObject": ScreenObject.get_field_names(),
@@ -230,7 +230,7 @@ class JsonResource:
             except Exception:
                 return None
 
-    def store_resource(self):
+    def store_resource(self) -> dict:
         file_name = f"{self.obj.id}.json"
         file_path = os.path.join(self.obj_dir, file_name)
         response = {"data": f"Saved: {file_name}"}
@@ -239,7 +239,7 @@ class JsonResource:
             logging.debug(response)
         return response
 
-    def load_resource(self):
+    def load_resource(self) -> dict:
         file_name = f"{self.obj.id}.json"
         file_path = os.path.join(self.obj_dir, file_name)
         response = {"data": f"Loaded: {file_name}"}
@@ -253,7 +253,7 @@ class JsonResource:
         logging.debug(response)
         return obj_json
 
-    def delete_resource(self):
+    def delete_resource(self) -> dict:
         file_name = f"{self.obj.id}.json"
         file_path = os.path.join(self.obj_dir, file_name)
         response = {"data": f"Deleted: {file_path}"}
@@ -287,7 +287,7 @@ class JsonCollectionResource:
         else:
             self.save_collection()
 
-    def model_to_str(self):
+    def model_to_str(self) -> str:
         if self.model_cls == Action:
             return "Action"
         elif self.model_cls == Task:
@@ -295,14 +295,14 @@ class JsonCollectionResource:
         elif self.model_cls == Schedule:
             return "Schedule"
 
-    def get_collection(self, obj_id):
+    def get_collection(self, obj_id: int) -> dict:
         if self.json_collection.get(str(obj_id)):
             response = self.json_collection.get(str(obj_id))
         else:
             response = {"data": f"{self.model_to_str()} not found."}
         return response
 
-    def get_collection_by_name(self, obj_name):
+    def get_collection_by_name(self, obj_name: str) -> dict:
         response = {"data": "Task not found."}
         if self.json_collection not in [None, {}]:
             for key in self.json_collection:
@@ -312,7 +312,7 @@ class JsonCollectionResource:
         logging.debug(response)
         return response
 
-    def add_collection(self, obj):
+    def add_collection(self, obj: Any) -> dict:
         response = {}
         if self.json_collection not in [None, {}]:
             names = []
@@ -335,7 +335,7 @@ class JsonCollectionResource:
         logging.debug(f"Added {self.model_to_str()} with id: {obj.id}")
         return response
 
-    def update_collection(self, index: int, obj):
+    def update_collection(self, index: int, obj: Any) -> Any:
         if index >= len(self.json_collection) or index < 0:
             response = {"data": "Invalid ID entered."}
             logging.debug(response)
@@ -345,7 +345,7 @@ class JsonCollectionResource:
         logging.debug(f"Updated {self.model_to_str()} with id: {index}")
         return obj
 
-    def load_collection(self):
+    def load_collection(self) -> None:
         self.json_collection = {}
         if exists(self.file_path):
             with open(self.file_path, "r", encoding="utf-8") as file:
@@ -357,12 +357,12 @@ class JsonCollectionResource:
                 f"{self.model_to_str()} does not exist: " + self.file_path
             )
 
-    def save_collection(self):
+    def save_collection(self) -> None:
         with open(self.file_path, "w", encoding="utf-8") as file:
             json.dump(self.json_collection, file, indent=6)
             logging.debug(f"Saved {self.model_to_str()} collection")
 
-    def delete_collection(self, obj_id: int):
+    def delete_collection(self, obj_id: int) -> dict:
         if obj_id >= len(self.json_collection) or obj_id < 0:
             response = {
                 "Data": f"{self.model_to_str()} does not exist: {obj_id}"

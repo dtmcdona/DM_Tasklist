@@ -12,6 +12,7 @@ Task Manager
 """
 import logging
 import datetime as dt
+from typing import List, Any
 
 from . import api_resources, process_controller, celery_scheduler
 from .models import Task
@@ -40,7 +41,7 @@ class TaskManager:
             str(action_id): 0 for action_id in self.task.action_id_list
         }
 
-    def get_default_config(self):
+    def get_default_config(self) -> dict:
         """Set the config to default values for a never played task or in the case where
         celery settings changes"""
         conditionals = [
@@ -60,7 +61,7 @@ class TaskManager:
             "last_conditional_results": [],
         }
 
-    def load_task_config(self):
+    def load_task_config(self) -> dict:
         """Load previous config"""
         return {
             "conditionals": self.task.conditionals,
@@ -69,20 +70,20 @@ class TaskManager:
             "last_conditional_results": self.task.last_conditional_results,
         }
 
-    def save_task_config(self):
+    def save_task_config(self) -> None:
         """Save config for the current task"""
         new_task = self.task.dict()
         new_task.update(self.config)
         new_task_obj = Task(**new_task)
         self.task = api_resources.storage.update_task(self.task.id, new_task_obj)
 
-    def start_playback(self):
+    def start_playback(self) -> dict:
         """Execute all actions in a task then save the config"""
         self.execute_actions()
         self.save_task_config()
         return {"data": "Task complete"}
 
-    def execute_actions(self):
+    def execute_actions(self) -> None:
         """This will loop through all actions in a linear, conditional or re-ordered task"""
         index: int = 0
         action_names = [action.get("name") for action in self.actions]
@@ -136,13 +137,13 @@ class TaskManager:
                     )
 
     @staticmethod
-    def _cancel_schedulers(schedulers):
+    def _cancel_schedulers(schedulers) -> None:
         """Cancels any preexisting schedulers when playback order changes"""
         for scheduler in schedulers:
             if scheduler:
                 scheduler.cancel_schedule()
 
-    def get_celery_schedulers(self, starting_index=0):
+    def get_celery_schedulers(self, starting_index: int = 0) -> List[Any]:
         """Creates a list of schedulers with an expected result due datetime"""
         schedulers = []
         result_wait_seconds = 0

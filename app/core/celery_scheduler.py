@@ -14,11 +14,13 @@ Celery Scheduler:
         6. Result due date
             - The date time this action condition result is due
 """
+import datetime
 import threading
 import time
 import uuid
 import datetime as dt
 from collections import deque
+from typing import Optional
 
 from . import celery_worker, models, process_controller, redis_cache
 
@@ -40,13 +42,13 @@ class CeleryScheduler:
         self.result_due_date = result_due_datetime
         self.cancel_threads = threading.Event()
 
-    def cancel_schedule(self):
+    def cancel_schedule(self) -> None:
         self.cancel_threads.set()
 
     def get_time_delta(self):
         return self.starting_datetime - dt.datetime.now()
 
-    def get_latest_result(self):
+    def get_latest_result(self) -> Optional[bool]:
         result = None
         for cache_key in reversed(self.cache_key_list):
             result = redis_cache.get_condition_result(cache_key)
@@ -55,7 +57,7 @@ class CeleryScheduler:
 
         return result
 
-    def get_final_result(self):
+    def get_final_result(self) -> Optional[bool]:
         result = None
         while result is None:
             if len(self.cache_key_list) > 0:
@@ -66,7 +68,7 @@ class CeleryScheduler:
 
         return result
 
-    def create_job(self, job_num, job_start_time):
+    def create_job(self, job_num:  int, job_start_time: datetime) -> None:
         screenshot_file = process_controller.save_screenshot()
         job_key = self.cache_key_list[job_num]
         now = dt.datetime.now()
@@ -80,13 +82,13 @@ class CeleryScheduler:
                 cache_key=job_key,
             )
 
-    def job_scheduler_thread(self):
+    def job_scheduler_thread(self) -> None:
         for job_num, job_start_time in enumerate(self.job_schedule):
             if self.cancel_threads.is_set():
                 break
             self.create_job(job_num, job_start_time)
 
-    def create_job_schedule(self):
+    def create_job_schedule(self) -> None:
         self.job_schedule = deque()
         for job_num in range(self.max_num_jobs):
             job_start_time = self.result_due_date - dt.timedelta(
@@ -100,13 +102,13 @@ class CeleryScheduler:
             for job_num in range(len(self.job_schedule))
         ]
 
-    def execute_job_schedule(self):
+    def execute_job_schedule(self) -> None:
         job_schedule_thread = threading.Thread(
             target=self.job_scheduler_thread(), daemon=True
         )
         job_schedule_thread.start()
 
-    def execute_job_retry(self):
+    def execute_job_retry(self) -> None:
         job_num = len(self.job_schedule)
         job_start_time = dt.datetime.now()
         self.cache_key_list.append(f"{self.schedule_id}-{job_num}")

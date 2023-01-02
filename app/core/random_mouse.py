@@ -9,7 +9,7 @@ import time
 from . import process_controller
 
 
-def random_move(x: int, y: int):
+def random_move(x: int, y: int) -> None:
     """Choose a random amount of segments to move to x, y"""
     random_steps = random.randrange(6, 18)
     """Loop through all the random moves of mouse to get closer to x, y"""
@@ -56,7 +56,7 @@ def random_click(
     rand_range: int = 0,
     delay_duration: float = 0,
     mouse_button: str = "left",
-):
+) -> None:
     """Click random destionation within radius equal to rand_rang and delay the click by delay_duration"""
     if rand_range > 0:
         random_x = x + random.randrange(-rand_range, rand_range)
@@ -76,7 +76,7 @@ def random_click(
     process_controller.mouse_up(mouse_button=mouse_button)
 
 
-def mouse_drift():
+def mouse_drift() -> None:
     """Function to make the user seem more human with slightly moving mouse"""
     random_repeat = random.randrange(0, 6)
     while random_repeat < 3:

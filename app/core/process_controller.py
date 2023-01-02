@@ -18,6 +18,7 @@ import random
 import subprocess
 import time
 import uuid
+from typing import Tuple, Optional
 
 import cv2
 import enchant
@@ -47,22 +48,22 @@ screen_width, screen_height = pyautogui.size()
 logging.basicConfig(level=logging.DEBUG)
 
 
-def mouse_up(mouse_button="left"):
+def mouse_up(mouse_button: str="left"):
     """Mouse button up"""
     pyautogui.mouseUp(button=mouse_button)
 
 
-def mouse_down(mouse_button="left"):
+def mouse_down(mouse_button: str="left"):
     """Mouse button down"""
     pyautogui.mouseDown(button=mouse_button)
 
 
-def mouse_pos():
+def mouse_pos() -> Tuple[int, int]:
     """Mouse (x, y) position"""
     return pyautogui.position()
 
 
-def open_browser(url: str):
+def open_browser(url: str) -> dict:
     """Open a browser window"""
     try:
         browser_options = (
@@ -93,7 +94,7 @@ def open_browser(url: str):
     return response
 
 
-def evaluate_conditional(condition, variable_value, comparison_value=None):
+def evaluate_conditional(condition: str, variable_value: str, comparison_value: Optional[str] = None) -> Optional[bool]:
     """Comparison value is provided by user and the variable_value is from
     capture_screen_data action"""
     if condition not in constants.CONDITIONALS:
@@ -102,12 +103,12 @@ def evaluate_conditional(condition, variable_value, comparison_value=None):
         if not comparison_value:
             return False
         if condition == "greater_than":
-            if variable_value > comparison_value:
+            if float(variable_value) > float(comparison_value):
                 return True
             else:
                 return False
         elif condition == "less_than":
-            if variable_value < comparison_value:
+            if float(variable_value) < float(comparison_value):
                 return True
             else:
                 return False
@@ -133,7 +134,7 @@ def evaluate_conditional(condition, variable_value, comparison_value=None):
         return True
 
 
-def process_action(action: models.Action):
+def process_action(action: models.Action) -> dict:
     """Process a given action based on its function"""
     response = {"data": f'Error with action_id:{action.get("id")}'}
     if action.get("time_delay") not in [0.0, None]:
@@ -262,7 +263,7 @@ def process_action(action: models.Action):
     return response
 
 
-def get_conditionals_result(action: models.Action, screenshot_file: str = None):
+def get_conditionals_result(action: models.Action, screenshot_file: str = None) -> bool:
     conditionals_result = True
     image_conditions = action.get("image_conditions")
     variable_conditions = action.get("variable_conditions")
@@ -305,9 +306,10 @@ def get_conditionals_result(action: models.Action, screenshot_file: str = None):
     return conditionals_result
 
 
-def action_controller(action: models.Action, prefetched_condition_result: bool = None):
+def action_controller(action: models.Action, prefetched_condition_result: bool = None) -> dict:
     """This controller manages different outcomes of the action's conditional
     and then processes the given action"""
+    response = {"data": f'Error occurred with action_id: {action.get("id")}'}
     if action.get("function") not in constants.ACTIONS:
         response = {"data": f'Action has invalid function: {action.get("id")}'}
         logging.debug(response)
@@ -356,7 +358,7 @@ def action_controller(action: models.Action, prefetched_condition_result: bool =
     return response
 
 
-def keypress(key_input: str, duration: float = 0.05):
+def keypress(key_input: str, duration: float = 0.05) -> dict:
     """Presses the given key for a duration"""
     response = {"data": "Invalid input"}
     valid_input = pyautogui.KEYBOARD_KEYS
@@ -384,7 +386,7 @@ def keypress(key_input: str, duration: float = 0.05):
     return response
 
 
-def mouse_click(x: int, y: int):
+def mouse_click(x: int, y: int) -> dict:
     """Moves and clicks the mouse at point (x, y)"""
     screen_width, screen_height = pyautogui.size()
     response = {"data": "Invalid input"}
@@ -395,7 +397,7 @@ def mouse_click(x: int, y: int):
     return response
 
 
-def mouse_move(x: int, y: int, duration: float = 0.0):
+def mouse_move(x: int, y: int, duration: float = 0.0) -> dict:
     """Moves the mouse to (x, y)"""
     screen_width, screen_height = pyautogui.size()
     response = {"data": "Invalid input"}
@@ -411,7 +413,7 @@ def image_search(
         haystack_file_name: str = "",
         percent_similarity: float = 0.9,
         delete_haystack_file: bool = True
-):
+) -> Tuple[int, int]:
     """Search for 'needle' image in a 'haystack' image and return (x, y) coords"""
     print(needle_file_name)
     needle_file_path = os.path.join(image_dir, needle_file_name)
@@ -462,7 +464,7 @@ def image_search(
 
 def capture_screen_data(
         x1: int, y1: int, x2: int, y2: int, action_id: int, testing: bool = False
-):
+) -> dict:
     """This function captures data within the region within (x1, y1) and (x2, y2)"""
     response = {"data": "Screen data not captured"}
     screenshot_id = str(uuid.uuid4())
@@ -627,7 +629,7 @@ def capture_screen_data(
     return response
 
 
-def screen_snip(x1: int, y1: int, x2: int, y2: int, image: models.Image):
+def screen_snip(x1: int, y1: int, x2: int, y2: int, image: models.Image) -> dict:
     """This function is used to capture a section of the screen and
     store in resources/images as png and json files"""
     base_dir = pathlib.Path(".").absolute()
@@ -666,7 +668,7 @@ def screen_snip(x1: int, y1: int, x2: int, y2: int, image: models.Image):
     return response
 
 
-def screen_shot():
+def screen_shot() -> dict:
     """This function uses the current display and returns a base-64 image"""
     timestamp = round(time.time() * 1000)
     base_dir = pathlib.Path(".").absolute()
@@ -686,7 +688,7 @@ def screen_shot():
     return response
 
 
-def save_screenshot():
+def save_screenshot() -> str:
     file_name = f"{uuid.uuid4()}.png"
     haystack_file_path = os.path.join(image_dir, file_name)
     pyautogui.screenshot(haystack_file_path)

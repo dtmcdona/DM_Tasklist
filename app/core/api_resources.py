@@ -36,46 +36,46 @@ class APICollections:
         self.logging_level = logging.WARNING
         logging.basicConfig(level=self.logging_level)
 
-    def add_action(self, action) -> dict:
+    def add_action(self, action: models.Action) -> dict:
         return self.action_collection.add_collection(action)
 
-    def get_action(self, action_id) -> models.Action:
+    def get_action(self, action_id: int) -> models.Action:
         return self.action_collection.get_collection(action_id)
 
-    def get_action_collection(self):
+    def get_action_collection(self) -> dict:
         return self.action_collection.json_collection
 
-    def update_action(self, action_id, action) -> models.Action:
+    def update_action(self, action_id: int, action: models.Action) -> models.Action:
         return self.action_collection.update_collection(action_id, action)
 
     def delete_action(self, action_id):
         return self.action_collection.delete_collection(action_id)
 
-    def add_task(self, task) -> dict:
+    def add_task(self, task: models.Task) -> dict:
         return self.task_collection.add_collection(task)
 
-    def get_task(self, task_id) -> models.Task:
+    def get_task(self, task_id: str) -> models.Task:
         return self.task_collection.get_collection(task_id)
 
-    def get_task_by_name(self, task_name):
+    def get_task_by_name(self, task_name: str) -> models.Task:
         return self.task_collection.get_collection_by_name(task_name)
 
-    def get_task_collection(self):
+    def get_task_collection(self) -> dict:
         return self.task_collection.json_collection
 
-    def update_task(self, task_id, task) -> models.Task:
+    def update_task(self, task_id: int, task: models.Task) -> models.Task:
         return self.task_collection.update_collection(task_id, task)
 
-    def delete_task(self, task_id):
+    def delete_task(self, task_id: int):
         return self.task_collection.delete_collection(task_id)
 
-    def get_schedule(self, schedule_id) -> models.Schedule:
+    def get_schedule(self, schedule_id: int) -> models.Schedule:
         return self.schedule_collection.get_collection(schedule_id)
 
-    def get_schedule_by_name(self, schedule_name):
+    def get_schedule_by_name(self, schedule_name: str):
         return self.schedule_collection.get_collection_by_name(schedule_name)
 
-    def get_schedule_collection(self):
+    def get_schedule_collection(self) -> dict:
         return self.schedule_collection.json_collection
 
     def update_schedule(self, schedule_id, schedule) -> models.Schedule:

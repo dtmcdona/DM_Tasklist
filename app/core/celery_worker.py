@@ -18,6 +18,6 @@ def run_action(action_id: int):
 @celery.task(name="cache_conditional_result")
 def cache_conditional_result(
     action: models.Action, cache_key: str, screenshot_file: str
-):
+) -> None:
     result = process_controller.get_conditionals_result(action, screenshot_file)
     redis_cache.set_condition_result(cache_key, result)
