@@ -1,3 +1,14 @@
+"""
+API Resources
+    API Collections - central storage for JSON Collection objects
+        1. Action collection - All actions created, read, updated and
+            deleted through the API endpoints
+        2. Task collection - All tasks  created, read, updated and
+            deleted through the API endpoints
+        3. Schedule collection - All schedules created, read, updated and
+            deleted through the API endpoints
+        4. Logging level - Logging level for the API
+"""
 import logging
 
 from . import models

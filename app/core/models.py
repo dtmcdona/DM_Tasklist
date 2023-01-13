@@ -14,9 +14,9 @@ Models:
         - Mouse position - Might be used in the future to track relative mouse x and y
             coordinates for different resolutions
     JSON resources
-        - All CRUD operations
+        - All CRUD operations for utilizing single json files
     JSON collection resources
-        - All CRUD operations
+        - All CRUD operations for utilizing collections of json files
 """
 import datetime
 import json
