@@ -25,7 +25,7 @@ import os
 import uuid
 from os.path import exists
 from pathlib import Path
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Union
 
 from pydantic import BaseModel
 from pydantic.types import Json
@@ -46,8 +46,7 @@ class ExtendedBaseModel(BaseModel):
 class Action(BaseModel):
     """Actions represent the smallest process of a task"""
 
-    id: Optional[int]
-    name: str
+    id: Optional[str] = str(uuid.uuid4())
     function: str
     x1: Optional[int] = None
     x2: Optional[int] = None
@@ -64,7 +63,7 @@ class Action(BaseModel):
     key_pressed: Optional[str] = None
     true_case: Optional[str] = "conditions_true"
     false_case: Optional[str] = "conditions_false"
-    skip_to_name: Optional[str] = None
+    skip_to_id: Optional[str] = None
     error_case: Optional[str] = "error"
     num_repeats: Optional[int] = 0
     random_path: Optional[bool] = False
@@ -75,10 +74,9 @@ class Action(BaseModel):
 class Task(BaseModel):
     """Tasks represent a collection of actions that complete a goal"""
 
-    id: Optional[int]
-    name: str
+    id: Optional[str] = str(uuid.uuid4())
     task_dependency_id: Optional[int] = None
-    action_id_list: List[int] = []
+    action_id_list: List[str] = []
     job_creation_delta_time: Optional[float] = 0.5
     max_num_celery_jobs: Optional[int] = 10
     conditionals: Optional[List[int]] = []
@@ -90,18 +88,17 @@ class Task(BaseModel):
 class Schedule(BaseModel):
     """Schedule is a series of tasks to run over a given timeframe"""
 
-    id: Optional[int]
-    name: str
-    schedule_dependency_id: Optional[int] = None
-    task_id_list: List[int] = []
+    id: Optional[str] = str(uuid.uuid4())
+    schedule_dependency_id: Optional[str] = None
+    task_id_list: List[str] = []
 
 
 class ScreenObject(ExtendedBaseModel):
     """Screen objects represent text, buttons, or GUI elements"""
 
-    id: Optional[str] = uuid.uuid4()
+    id: Optional[str] = str(uuid.uuid4())
     type: Optional[str] = "text"
-    action_id: Optional[int] = None
+    action_id: Optional[str] = None
     timestamp: Optional[str] = datetime.datetime.now().isoformat()
     text: str = ""
     x1: int
@@ -114,7 +111,7 @@ class ScreenData(ExtendedBaseModel):
     """Screen data is a collection for all the screen objects found and the
     screenshot is saved as a base 64 image"""
 
-    id: Optional[str] = uuid.uuid4()
+    id: Optional[str] = str(uuid.uuid4())
     timestamp: Optional[str] = datetime.datetime.now().isoformat()
     base64str: str
     screen_obj_ids: List[str]
@@ -124,7 +121,7 @@ class Image(ExtendedBaseModel):
     """Represents any picture image that needs to be stored via a 64 bit
     encoding"""
 
-    id: Optional[str] = uuid.uuid4()
+    id: Optional[str] = str(uuid.uuid4())
     width: Optional[int] = 1920
     height: Optional[int] = 1080
     timestamp: Optional[str] = datetime.datetime.now().isoformat()
@@ -139,14 +136,14 @@ class Image(ExtendedBaseModel):
 class JsonData(BaseModel):
     """Abstract data type for storing unique data"""
 
-    id: int
+    id: str
     data: Json
 
 
 class Source(BaseModel):
     """Represents an abstract data source stored in the file system"""
 
-    id: int
+    id: str
     uri: str
 
 
@@ -154,18 +151,18 @@ class CapturedData(BaseModel):
     """Represents any form of data that can be captured as relevant data
     for an action or task"""
 
-    id: int
+    id: str
     type: str
-    source_id: int
-    json_data_id: int
-    schedule_id: int
+    source_id: str
+    json_data_id: str
+    schedule_id: str
 
 
 class TaskRank(BaseModel):
     """Used to determine how efficient it completes a goal"""
 
     task_rank: int
-    task_id: int
+    task_id: str
     delta_vars: List[float]
     duration: datetime.time
 
@@ -174,7 +171,7 @@ class MousePosition(BaseModel):
     """Might be used in the future to track relative mouse x and y coords for
     different resolutions"""
 
-    action_id: int
+    action_id: str
     x: int
     y: int
     screen_width: int
@@ -295,54 +292,41 @@ class JsonCollectionResource:
         elif self.model_cls == Schedule:
             return "Schedule"
 
-    def get_collection(self, obj_id: int) -> dict:
-        if self.json_collection.get(str(obj_id)):
-            response = self.json_collection.get(str(obj_id))
+    def get_collection(self, obj_id: str) -> dict:
+        obj = self.json_collection.get(obj_id)
+        if obj:
+            response = obj
         else:
             response = {"data": f"{self.model_to_str()} not found."}
         return response
 
-    def get_collection_by_name(self, obj_name: str) -> dict:
-        response = {"data": "Task not found."}
+    def add_collection(self, obj: Union[Action, Task, Schedule]) -> Union[Action, Task, Schedule]:
+        response = {f"Error adding {self.model_to_str()} with id: {obj.id}"}
         if self.json_collection not in [None, {}]:
-            for key in self.json_collection:
-                if obj_name == self.json_collection[key].get("name"):
-                    response = self.json_collection[key]
-                    break
-        logging.debug(response)
-        return response
+            ids = self.json_collection.keys()
+            while obj.id in ids:
+                obj.id = str(uuid.uuid4())
 
-    def add_collection(self, obj: Any) -> dict:
-        response = {}
-        if self.json_collection not in [None, {}]:
-            names = []
-            for key in self.json_collection:
-                names.append(self.json_collection[key].get("name"))
-            if obj.name not in names:
-                obj.id = len(self.json_collection)
-                self.json_collection[str(obj.id)] = obj.dict()
-                self.save_collection()
-                response = obj
-            else:
-                index = names.index(obj.name)
-                obj.id = index
-                response = self.update_collection(index, obj)
+            self.json_collection[obj.id] = obj.dict()
+            self.save_collection()
+            response = obj
+            logging.debug(f"Added {self.model_to_str()} with id: {obj.id}")
         else:
-            obj.id = 0
-            self.json_collection = {"0": obj.dict()}
+            self.json_collection = {obj.id: obj.dict()}
             response = obj
             self.save_collection()
-        logging.debug(f"Added {self.model_to_str()} with id: {obj.id}")
+            logging.debug(f"Added {self.model_to_str()} with id: {obj.id}")
         return response
 
-    def update_collection(self, index: int, obj: Any) -> Any:
-        if index >= len(self.json_collection) or index < 0:
+    def update_collection(self, obj_id: str, obj: Union[Action, Task, Schedule]) -> Union[Action, Task, Schedule]:
+        ids = self.json_collection.keys()
+        if obj_id not in ids:
             response = {"data": "Invalid ID entered."}
             logging.debug(response)
             return response
-        self.json_collection[str(index)] = obj.dict()
+        self.json_collection[obj_id] = obj.dict()
         self.save_collection()
-        logging.debug(f"Updated {self.model_to_str()} with id: {index}")
+        logging.debug(f"Updated {self.model_to_str()} with id: {obj_id}")
         return obj
 
     def load_collection(self) -> None:
@@ -362,23 +346,15 @@ class JsonCollectionResource:
             json.dump(self.json_collection, file, indent=6)
             logging.debug(f"Saved {self.model_to_str()} collection")
 
-    def delete_collection(self, obj_id: int) -> dict:
-        if obj_id >= len(self.json_collection) or obj_id < 0:
+    def delete_collection(self, obj_id: str) -> dict:
+        response = {"data": f"Deleted {self.model_to_str()} with id: {obj_id}"}
+        try:
+            del self.json_collection[obj_id]
+            logging.debug(response)
+            self.save_collection()
+        except KeyError:
             response = {
-                "Data": f"{self.model_to_str()} does not exist: {obj_id}"
+                "data": f"{self.model_to_str()} does not exist: {obj_id}"
             }
+        finally:
             return response
-        new_json_collection = {}
-        index = 0
-        for key in self.json_collection:
-            if key == str(obj_id):
-                continue
-            element = self.json_collection[str(key)]
-            element["id"] = index
-            new_json_collection[str(index)] = element
-            index += 1
-        self.json_collection = new_json_collection
-        response = {"Data": f"Deleted {self.model_to_str()} with id: {obj_id}"}
-        logging.debug(response)
-        self.save_collection()
-        return response

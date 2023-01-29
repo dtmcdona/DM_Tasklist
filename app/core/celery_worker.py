@@ -11,7 +11,7 @@ celery = Celery(__name__, broker="amqp://user:password@broker:5672")
 
 
 @celery.task(name="run_action")
-def run_action(action_id: int):
+def run_action(action_id: str):
     return api.execute_action(action_id)
 
 

@@ -11,7 +11,7 @@ API Resources
 """
 import logging
 
-from . import models
+from . import models, redis_cache
 
 
 class APICollections:
@@ -45,22 +45,34 @@ class APICollections:
             )
 
         self.logging_level = logging.WARNING
-        logging.basicConfig(level=self.logging_level)
 
     def add_action(self, action: models.Action) -> dict:
-        return self.action_collection.add_collection(action)
+        response = self.action_collection.add_collection(action)
+        redis_cache.set_json("action", response.id, response.dict())
+        return response
 
-    def get_action(self, action_id: int) -> models.Action:
-        return self.action_collection.get_collection(action_id)
+    def get_action(self, action_id: str) -> models.Action:
+        cached_value = redis_cache.get_json("action", action_id)
+        if cached_value:
+            return cached_value
+
+        response = self.action_collection.get_collection(action_id)
+        redis_cache.set_json("action", response.get("id"), response)
+        return response
 
     def get_action_collection(self) -> dict:
         return self.action_collection.json_collection
 
-    def update_action(self, action_id: int, action: models.Action) -> models.Action:
+    def update_action(self, action_id: str, action: models.Action) -> models.Action:
+        response = self.action_collection.update_collection(action_id, action)
+        redis_cache.set_json("action", response.id, response.dict())
         return self.action_collection.update_collection(action_id, action)
 
     def delete_action(self, action_id):
-        return self.action_collection.delete_collection(action_id)
+        response = self.action_collection.delete_collection(action_id)
+        if response.get('data') == f"Deleted Action with id: {action_id}":
+            redis_cache.del_json("action", action_id)
+        return response
 
     def add_task(self, task: models.Task) -> dict:
         return self.task_collection.add_collection(task)
@@ -68,23 +80,17 @@ class APICollections:
     def get_task(self, task_id: str) -> models.Task:
         return self.task_collection.get_collection(task_id)
 
-    def get_task_by_name(self, task_name: str) -> models.Task:
-        return self.task_collection.get_collection_by_name(task_name)
-
     def get_task_collection(self) -> dict:
         return self.task_collection.json_collection
 
-    def update_task(self, task_id: int, task: models.Task) -> models.Task:
+    def update_task(self, task_id: str, task: models.Task) -> models.Task:
         return self.task_collection.update_collection(task_id, task)
 
-    def delete_task(self, task_id: int):
+    def delete_task(self, task_id: str):
         return self.task_collection.delete_collection(task_id)
 
-    def get_schedule(self, schedule_id: int) -> models.Schedule:
+    def get_schedule(self, schedule_id: str) -> models.Schedule:
         return self.schedule_collection.get_collection(schedule_id)
-
-    def get_schedule_by_name(self, schedule_name: str):
-        return self.schedule_collection.get_collection_by_name(schedule_name)
 
     def get_schedule_collection(self) -> dict:
         return self.schedule_collection.json_collection

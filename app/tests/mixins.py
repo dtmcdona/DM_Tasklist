@@ -10,11 +10,12 @@ from typing import List
 import pytest
 from core import api_resources, fast_api_endpoints, constants, models
 
+from core import redis_cache
+
 
 class ModelMixin:
     test_action = {
-        "id": 1,
-        "name": "test_capture_screen_data",
+        "id": "test_capture_screen_data",
         "function": "capture_screen_data",
         "x1": 0,
         "y1": 0,
@@ -24,7 +25,7 @@ class ModelMixin:
             "test_image.png",
         ],
     }
-    test_task = {"name": "test_task", "action_id_list": [1]}
+    test_task = {"id": "test_task", "action_id_list": [1]}
     test_task_obj = None
     base_dir = pathlib.Path(".").absolute()
     resources_dir = os.path.join(base_dir, "resources")
@@ -119,7 +120,6 @@ class ModelMixin:
                 ):
                     for position, rand_range in rand_mouse_positions:
                         new_test_action = {
-                            "name": str(uuid.uuid4()),
                             "function": action_function,
                             "x1": position[0],
                             "y1": position[1],
@@ -131,7 +131,6 @@ class ModelMixin:
                         cls.add_action(test_action_obj)
                 elif action_function == "move_to_image":
                     new_test_action = {
-                        "name": str(uuid.uuid4()),
                         "function": action_function,
                         "images": [
                             "test_image_copy.png",
@@ -146,7 +145,6 @@ class ModelMixin:
                     cls.add_action(test_action_obj)
                 elif action_function == "click_image":
                     new_test_action = {
-                        "name": str(uuid.uuid4()),
                         "function": action_function,
                         "images": [
                             "test_image_copy2.png",
@@ -162,18 +160,14 @@ class ModelMixin:
                 elif action_function != "key_pressed":
                     for key in key_presses:
                         new_test_action = {
-                            "name": str(uuid.uuid4()),
                             "function": action_function,
                             "key_pressed": key,
                         }
                         test_action_obj = models.Action(**new_test_action)
                         cls.add_action(test_action_obj)
         cls.test_task = {
-            "id": 0,
-            "name": "test_task",
-            "action_id_list": [
-                i for i in range(len(cls.get_action_collection()))
-            ],
+            "id": "test_task",
+            "action_id_list": [key for key in cls.get_action_collection().keys()],
         }
         cls.test_task_obj = models.Task(**cls.test_task)
         cls.update_task(0, cls.test_task_obj)
@@ -189,6 +183,7 @@ class ModelMixin:
 
     @classmethod
     def teardown_class(cls):
+        redis_cache.rc.flushdb()
         os.remove(cls.action_collection.file_path)
         file_types = ["png", "json"]
         for image_id in cls.delete_image_files:
@@ -219,21 +214,21 @@ class ModelMixin:
 
     def add_actions_to_task(self) -> None:
         self.test_task = {
-            "name": "test_task",
+            "id": "test_task",
             "action_id_list": self.get_action_ids(),
         }
         self.test_task_obj = models.Task(**self.test_task)
         self.update_task(1, self.test_task_obj)
 
     def get_action_ids(self) -> List[int]:
-        return [i for i in range(len(self.get_action_collection()))]
+        return [key for key in self.get_action_collection().keys()]
 
     @staticmethod
     def clear_images():
         image_dir = os.path.join(models.resources_dir, "images")
-        for filename in os.listdir(image_dir):
-            if filename not in ("test_image.json", "test_image.png"):
-                file_path = os.path.join(image_dir, filename)
+        for file_name in os.listdir(image_dir):
+            if file_name not in ("test_image.json", "test_image.png"):
+                file_path = os.path.join(image_dir, file_name)
                 os.remove(file_path)
 
     @staticmethod

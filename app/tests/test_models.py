@@ -1,37 +1,35 @@
 import logging
 import os
+import uuid
 
 from core.models import Action, Task, Schedule, JsonCollectionResource
 
 
 class TestModels:
     """Used to test actions, tasks, and schedule lists"""
-
+    action_id1 = f"{uuid.uuid4()}1"
+    action_id2 = f"{uuid.uuid4()}2"
+    task_id = str(uuid.uuid4())
+    schedule_id = str(uuid.uuid4())
     test_action1 = {
-        "id": 0,
-        "name": "test_move_to",
+        "id": action_id1,
         "function": "move_to",
         "x1": 0,
         "y1": 0,
     }
     test_action2 = {
-        "id": 1,
-        "name": "test_click",
+        "id": action_id2,
         "function": "click",
         "x1": 0,
         "y1": 0,
     }
     test_task = {
-        "id": 0,
-        "name": "test_tasks",
-        "task_dependency_id": 0,
-        "action_id_list": [1, 2],
+        "id": task_id,
+        "action_id_list": [action_id1, action_id2],
     }
     test_shedule = {
-        "id": 0,
-        "name": "test_schedule",
-        "schedule_dependency_id": 0,
-        "task_id_list": [1],
+        "id": schedule_id,
+        "task_id_list": [task_id],
     }
 
     @classmethod
@@ -54,20 +52,20 @@ class TestModels:
         logging.debug(self.action_collection)
         test_task_obj = Task(**self.test_task)
         self.task_collection.add_collection(test_task_obj)
-        test_schedule1 = Schedule(**self.test_shedule)
-        self.schedule_collection.add_collection(test_schedule1)
+        test_schedule_obj = Schedule(**self.test_shedule)
+        self.schedule_collection.add_collection(test_schedule_obj)
         self.action_collection.load_collection()
         self.task_collection.load_collection()
         self.schedule_collection.load_collection()
-        assert set(self.action_collection.get_collection(0)) >= set(
+        assert set(self.action_collection.get_collection(self.action_id1)) >= set(
             self.test_action1
         )
-        assert set(self.action_collection.get_collection(1)) >= set(
+        assert set(self.action_collection.get_collection(self.action_id2)) >= set(
             self.test_action2
         )
-        assert set(self.task_collection.get_collection(0)) >= set(
+        assert set(self.task_collection.get_collection(self.task_id)) >= set(
             self.test_task
         )
-        assert set(self.schedule_collection.get_collection(0)) >= set(
+        assert set(self.schedule_collection.get_collection(self.schedule_id)) >= set(
             self.test_shedule
         )

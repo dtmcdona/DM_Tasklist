@@ -38,7 +38,7 @@ class TaskManager:
             else self.get_default_config()
         )
         self.actions_processed = {
-            str(action_id): 0 for action_id in self.task.action_id_list
+            str(index): 0 for index, action_id in enumerate(self.task.action_id_list)
         }
 
     def get_default_config(self) -> dict:
@@ -86,7 +86,7 @@ class TaskManager:
     def execute_actions(self) -> None:
         """This will loop through all actions in a linear, conditional or re-ordered task"""
         index: int = 0
-        action_names = [action.get("name") for action in self.actions]
+        action_ids: List[str] = [action.get("id") for action in self.actions]
         celery_schedulers = (
             self.get_celery_schedulers()
             if self.config.get("conditionals")
@@ -97,7 +97,7 @@ class TaskManager:
             index += 1
             if not action:
                 continue
-            self.actions_processed[str(action.get("id"))] += 1
+            self.actions_processed[str(index-1)] += 1
 
             if len(celery_schedulers) > index:
                 if (
@@ -126,11 +126,10 @@ class TaskManager:
                 )
             else:
                 self.status = process_controller.action_controller(action)
-
-            if self.status.get("data") == "skip_to_name":
-                skip_to_name = action.get("skip_to_name")
-                if skip_to_name in action_names:
-                    index = action_names.index(skip_to_name)
+            if self.status.get("data") == "skip_to_id":
+                skip_to_id = action.get("skip_to_id")
+                if skip_to_id in action_ids:
+                    index = action_ids.index(skip_to_id)
                     self._cancel_schedulers(celery_schedulers)
                     celery_schedulers = self.get_celery_schedulers(
                         starting_index=index

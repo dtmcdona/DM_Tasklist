@@ -9,6 +9,8 @@ Fast API Endpoints
             2. Execute Tasks
             3. Execute Schedules
 """
+import logging
+
 from . import api_resources, celery_worker, models, process_controller
 from . import task_manager as manager
 
@@ -18,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-origins = ["http://localhost:3000"]
+origins = ["http://localhost:3000", "http://localhost:8003"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -26,6 +28,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+logging.basicConfig(level=api_resources.storage.logging_level)
 
 @app.get("/")
 def home():
@@ -46,8 +49,8 @@ def get_actions():
 
 
 @app.get("/get-action/{action_id}")
-def get_action(
-    action_id: int = Path(
+async def get_action(
+    action_id: str = Path(
         None,
         description="The ID of the action you would like to view.",
     )
@@ -62,141 +65,19 @@ def add_action(new_action: models.Action):
     return api_resources.storage.add_action(new_action)
 
 
-@app.post("/update-action/{action_id}")
-def update_action(action_id: int, new_action: models.Action):
-    """Updates a previous action with new information"""
-    return api_resources.storage.update_action(action_id, new_action)
-
-
-@app.get("/delete-action/{action_id}")
-def delete_action(action_id: int):
-    """Deletes an action by id"""
-    return api_resources.storage.delete_action(action_id)
-
-
-@app.get("/get-tasks")
-def get_tasks():
-    """Gets all stored tasks"""
-    return api_resources.storage.get_task_collection()
-
-
-@app.get("/get-task/{task_name}")
-def get_task(
-    task_name: str = Path(
-        1, description="The name of the task you would like to view."
-    )
-):
-    """Returns a task by name"""
-    return api_resources.storage.get_task_by_name(task_name)
-
-
-@app.post("/add-task")
-def add_task(task: models.Task):
-    """Adds a new task to api_resources.storage"""
-    return api_resources.storage.add_task(task)
-
-
-@app.post("/tasks-add-action/{task_name}")
-def task_add_action(task_name: str, new_action: models.Action):
-    """Adds a new action to task"""
-    action_response = api_resources.storage.add_action(new_action)
-    new_action_id = None
-    actions = api_resources.storage.get_action_collection()
-    if actions not in [None, {}]:
-        for index, action in actions:
-            if new_action.name == action.get(
-                "name"
-            ):
-                new_action_id = action.get("id")
-    response = {"data": f"Task {task_name} does not exist."}
-    tasks = api_resources.storage.get_task_collection()
-    if tasks not in [None, {}]:
-        for key, task in tasks:
-            if task_name == task.get("name"):
-                task["action_id_list"].append(
-                    new_action_id
-                )
-                response = {
-                    "data": "Action has been added to the task collection."
-                }
-    api_resources.storage.logging.debug(response)
+@app.post("/add-execute-action")
+def add_execute_action(new_action: models.Action):
+    """Adds a new action to api_resources.storage"""
+    response = api_resources.storage.add_action(new_action)
+    if isinstance(response, models.Action):
+        execution = process_controller.process_action(response, False)
+        logging.debug(execution)
     return response
-
-
-@app.get("/execute-task/{task_id}")
-def execute_task(task_id: int):
-    """Executes a task by looping through the action collection and executing each action"""
-    task = api_resources.storage.get_task(task_id)
-    if not task or task.get("action_id_list") in [None, []]:
-        response = {"data": "Task not found"}
-    else:
-        task_manager_obj = manager.TaskManager(task, False)
-        response = task_manager_obj.start_playback()
-    api_resources.storage.logging.debug(response)
-    return response
-
-
-@app.get("/get-schedules/")
-def get_schedules():
-    """Gets all stored schedules"""
-    return api_resources.storage.get_schedule_collection()
-
-
-@app.get("/get-schedule/{schedule_name}")
-def get_schedule(
-    schedule_name: str = Path(
-        1,
-        description="The name of the schedule you would like to view.",
-    )
-):
-    """Returns a schedule by name"""
-    return api_resources.storage.get_schedule_by_name(schedule_name)
-
-
-@app.post("/schedule-add-task/{schedule_name}/{task_name}")
-def schedule_add_task(schedule_name: str, task_name: str):
-    """Adds a task to a schedule"""
-    response = {"data": "Schedule does not exist."}
-    task_id = None
-    tasks = api_resources.storage.get_task_collection()
-    if tasks not in [None, {}]:
-        for index, task in tasks:
-            if task_name == task.get(
-                "name"
-            ):
-                task_id = task.get("id")
-    if task_id is None:
-        response = {"data": "Task does not exist."}
-        api_resources.storage.logging.debug(response)
-        return response
-    schedules = api_resources.storage.get_schedule_collection()
-    if schedules not in [None, {}]:
-        for index, schedule in schedules:
-            if schedule_name == schedule.get(
-                "name"
-            ):
-                schedule["task_id_list"].append(
-                    task_id
-                )
-                response = {"data": "Added task to schedule."}
-    api_resources.storage.logging.debug(response)
-    return response
-
-
-@app.post("/execute-celery-action/{action_id}")
-def execute_celery_action(
-    action_id: int = Path(
-        None,
-        description="The ID of the action you would like to run.",
-    )
-):
-    """This function creates a celery task that completes an actions"""
-    return celery_worker.run_action.delay(action_id)
 
 
 @app.get("/execute-action/{action_id}")
 def execute_action(
-    action_id: int = Path(
+    action_id: str = Path(
         None,
         description="The ID of the action you would like to run.",
     )
@@ -207,12 +88,141 @@ def execute_action(
     if action:
         response = process_controller.action_controller(action)
 
-    api_resources.storage.logging.debug(response)
+    logging.debug(response)
     return response
 
 
+@app.post("/update-action/{action_id}")
+def update_action(action_id: str, new_action: models.Action):
+    """Updates a previous action with new information"""
+    return api_resources.storage.update_action(action_id, new_action)
+
+
+@app.get("/delete-action/{action_id}")
+def delete_action(action_id: str):
+    """Deletes an action by id"""
+    return api_resources.storage.delete_action(action_id)
+
+
+@app.get("/get-tasks")
+def get_tasks():
+    """Gets all stored tasks"""
+    return api_resources.storage.get_task_collection()
+
+
+@app.get("/get-task/{task_id}")
+def get_task(
+    task_id: str = Path(
+        1, description="The id of the task you would like to view."
+    )
+):
+    """Returns a task by id"""
+    return api_resources.storage.get_task(task_id)
+
+
+@app.post("/add-task")
+def add_task(task: models.Task):
+    """Adds a new task to api_resources.storage"""
+    return api_resources.storage.add_task(task)
+
+
+@app.post("/update-task/{task_id}")
+def update_task(task_id: str, new_task: models.Task):
+    """Updates a previous task with new information"""
+    return api_resources.storage.update_task(task_id, new_task)
+
+
+@app.post("/task-add-action/{task_id}/{action_id}")
+def task_add_action(task_id: str, action_id: str):
+    """Adds an action to a task"""
+    response = {"data": "Schedule does not exist."}
+    action = api_resources.storage.get_action(action_id)
+    if action is None:
+        response = {"data": "Task does not exist."}
+        logging.debug(response)
+        return response
+    task = api_resources.storage.get_task(task_id)
+    if task is None:
+        response = {"data": "Schedule does not exist."}
+        logging.debug(response)
+        return response
+    else:
+        task["action_id_list"].append(
+            action_id
+        )
+        api_resources.storage.update_task(task_id, task)
+        response = {"data": "Added action to task."}
+    logging.debug(response)
+    return response
+
+
+@app.get("/execute-task/{task_id}")
+def execute_task(task_id: str):
+    """Executes a task by looping through the action collection and executing each action"""
+    task = api_resources.storage.get_task(task_id)
+    if not task or task.get("action_id_list") in [None, []]:
+        response = {"data": "Task not found"}
+    else:
+        task_manager_obj = manager.TaskManager(task, False)
+        response = task_manager_obj.start_playback()
+    logging.debug(response)
+    return response
+
+
+@app.get("/get-schedules/")
+def get_schedules():
+    """Gets all stored schedules"""
+    return api_resources.storage.get_schedule_collection()
+
+
+@app.get("/get-schedule/{schedule_id}")
+def get_schedule(
+    schedule_id: str = Path(
+        1,
+        description="The id of the schedule you would like to view.",
+    )
+):
+    """Returns a schedule by id"""
+    return api_resources.storage.get_schedule(schedule_id)
+
+
+@app.post("/schedule-add-task/{schedule_id}/{task_id}")
+def schedule_add_task(schedule_id: str, task_id: str):
+    """Adds a task to a schedule"""
+    response = {"data": "Schedule does not exist."}
+    task = api_resources.storage.get_task(task_id)
+    if task is None:
+        response = {"data": "Task does not exist."}
+        logging.debug(response)
+        return response
+    schedule = api_resources.storage.get_schedule(schedule_id)
+    if schedule is None:
+        response = {"data": "Schedule does not exist."}
+        logging.debug(response)
+        return response
+    else:
+        schedule["task_id_list"].append(
+            task_id
+        )
+        api_resources.storage.update_schedule(schedule_id, schedule)
+        response = {"data": "Added task to schedule."}
+    logging.debug(response)
+    return response
+
+
+@app.post("/execute-celery-action/{action_id}")
+def execute_celery_action(
+    action_id: str = Path(
+        None,
+        description="The ID of the action you would like to run.",
+    )
+):
+    """This function creates a celery task that completes an actions"""
+    return celery_worker.run_action.delay(action_id)
+
+
 @app.get("/screenshot/")
-def screen_shot():
+async def screen_shot():
     """This function only works with Fast API running on your local machine since docker containers run headless"""
     return process_controller.screen_shot()
 
@@ -234,7 +244,7 @@ def mouse_click(x: int, y: int):
     return process_controller.mouse_click(x, y)
 
 
-@app.get("/keypress/{key_name}")
+@app.get("/keypress/{key_id}")
 def keypress(key_name: str):
     return process_controller.keypress(key_name)
 

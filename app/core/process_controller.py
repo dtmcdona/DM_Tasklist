@@ -134,10 +134,12 @@ def evaluate_conditional(condition: str, variable_value: str, comparison_value: 
         return True
 
 
-def process_action(action: models.Action) -> dict:
+def process_action(action: models.Action, time_delay=True) -> dict:
     """Process a given action based on its function"""
+    if not isinstance(action, dict):
+        action = action.dict()
     response = {"data": f'Error with action_id:{action.get("id")}'}
-    if action.get("time_delay") not in [0.0, None]:
+    if time_delay and action.get("time_delay") not in [0.0, None]:
         delay = float(action["time_delay"])
         time.sleep(delay)
     if action.get("function") not in ["", None]:
@@ -309,6 +311,8 @@ def get_conditionals_result(action: models.Action, screenshot_file: str = None) 
 def action_controller(action: models.Action, prefetched_condition_result: bool = None) -> dict:
     """This controller manages different outcomes of the action's conditional
     and then processes the given action"""
+    if not isinstance(action, dict):
+        action = action.dict()
     response = {"data": f'Error occurred with action_id: {action.get("id")}'}
     if action.get("function") not in constants.ACTIONS:
         response = {"data": f'Action has invalid function: {action.get("id")}'}
@@ -581,7 +585,6 @@ def capture_screen_data(
             ", ".join(screen_obj_values),
         ]
         test_result_dict = {
-            "name": datetime.datetime.now().isoformat(),
             "function": "capture_screen_data",
             "variables": variables,
             "x1": x1,
@@ -603,7 +606,6 @@ def capture_screen_data(
             ", ".join(screen_obj_values),
         ]
         new_action = {
-            "name": datetime.datetime.now().isoformat(),
             "function": "capture_screen_data",
             "variables": variables,
             "x1": x1,

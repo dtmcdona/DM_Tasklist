@@ -30,8 +30,8 @@ CONDITIONALS: List[str] = [
 
 RESULTS: List[str] = [
     "continue",
-    "set_action_name",
-    "skip_to_name",
+    "set_action_id",
+    "skip_to_id",
     "sleep_and_repeat",
     "sleep",
     "set_variable",

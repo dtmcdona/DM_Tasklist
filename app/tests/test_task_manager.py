@@ -30,11 +30,12 @@ class TestTaskManager(ModelMixin):
         expected_actions_processed = {str(i): 1 for i in range(9)}
         assert task_manager_obj.actions_processed == expected_actions_processed
 
-    def test_start_playback__skip_to_name(self):
-        last_action_id = self.get_action_ids()[-1]
+    def test_start_playback__skip_to_id(self):
+        action_ids = self.get_action_ids()
+        last_action_id = action_ids[-1]
+        first_action_id = action_ids[0]
         self.test_action = {
-            "id": 0,
-            "name": "test_capture_screen_data",
+            "id": first_action_id,
             "function": "capture_screen_data",
             "x1": 0,
             "y1": 0,
@@ -42,14 +43,14 @@ class TestTaskManager(ModelMixin):
             "y2": 32,
             "images": ["test_image_copy3.png", "test_image_copy3.png"],
             "image_conditions": ["if_image_present"],
-            "true_case": "skip_to_name",
-            "false_case": "skip_to_name",
-            "skip_to_name": self.get_action(last_action_id).get("name"),
+            "true_case": "skip_to_id",
+            "false_case": "skip_to_id",
+            "skip_to_id": self.get_action(last_action_id).get("id"),
         }
         self.test_action_obj = models.Action(**self.test_action)
-        self.update_action(0, self.test_action_obj)
+        self.update_action(first_action_id, self.test_action_obj)
         task_manager_obj = self.expect_playback_success()
         expected_actions_processed = {
-            str(i): 1 if i == 0 or i == last_action_id else 0 for i in range(9)
+            str(i): 1 if i == 0 or i == len(action_ids)-1 else 0 for i in range(9)
         }
         assert task_manager_obj.actions_processed == expected_actions_processed
