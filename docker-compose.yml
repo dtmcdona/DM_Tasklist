@@ -11,8 +11,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      shm_size: "8g"
-    shm_size: "8g"
+      shm_size: "20g"
+    shm_size: "20g"
     ports:
       - 8003:8003
     restart: always
@@ -60,6 +60,6 @@ services:
   redis:
     hostname: redis
     container_name: redis
-    image: redis:6.2.7
+    image: redislabs/rejson:2.4.3
     ports:
       - 6379:6379
