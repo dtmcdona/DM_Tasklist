@@ -29,7 +29,7 @@ class TestRedisCache:
                 "0": "str",
                 "1": 1,
                 "2": False,
-            }
+            },
         }
         json_type = "json_type_test"
         id = str(uuid4())
@@ -41,4 +41,3 @@ class TestRedisCache:
         json_type = f"dne_test"
         index = 0
         assert not redis_cache.get_json(json_type, index)
-

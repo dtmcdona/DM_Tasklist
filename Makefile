@@ -12,7 +12,6 @@ format:
 	black --line-length 80 app/core/models.py
 	black --line-length 80 app/core/random_mouse.py
 	black --line-length 80 app/core/redis_cache.py
-	black --line-length 80 app/core/settings.py
 	black --line-length 80 app/core/task_manager.py
 	black --line-length 80 app/tests/*
 

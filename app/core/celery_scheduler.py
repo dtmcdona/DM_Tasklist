@@ -61,14 +61,16 @@ class CeleryScheduler:
         result = None
         while result is None:
             if len(self.cache_key_list) > 0:
-                result = redis_cache.get_condition_result(self.cache_key_list[-1])
+                result = redis_cache.get_condition_result(
+                    self.cache_key_list[-1]
+                )
                 time.sleep(0.01)
             else:
                 break
 
         return result
 
-    def create_job(self, job_num:  int, job_start_time: datetime) -> None:
+    def create_job(self, job_num: int, job_start_time: datetime) -> None:
         screenshot_file = process_controller.save_screenshot()
         job_key = self.cache_key_list[job_num]
         now = dt.datetime.now()

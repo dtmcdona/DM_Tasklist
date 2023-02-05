@@ -63,14 +63,16 @@ class APICollections:
     def get_action_collection(self) -> dict:
         return self.action_collection.get_all_collections()
 
-    def update_action(self, action_id: str, action: models.Action) -> models.Action:
+    def update_action(
+        self, action_id: str, action: models.Action
+    ) -> models.Action:
         response = self.action_collection.update_collection(action_id, action)
         redis_cache.set_json("action", response.id, response.dict())
         return self.action_collection.update_collection(action_id, action)
 
     def delete_action(self, action_id):
         response = self.action_collection.delete_collection(action_id)
-        if response.get('data') == f"Deleted Action with id: {action_id}":
+        if response.get("data") == f"Deleted Action with id: {action_id}":
             redis_cache.del_json("action", action_id)
         return response
 
@@ -100,5 +102,6 @@ class APICollections:
 
     def delete_schedule(self, schedule_id):
         return self.schedule_collection.delete_collection(schedule_id)
+
 
 storage = APICollections()

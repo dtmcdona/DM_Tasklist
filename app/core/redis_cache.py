@@ -13,6 +13,7 @@ from redis.commands.json.path import Path
 
 rc = redis.Redis(host="redis", port=6379, db=0)
 
+
 def set_condition_result(key: str, result: bool) -> None:
     rc.set(key, str(result))
 
@@ -23,9 +24,7 @@ def get_condition_result(key: str) -> Optional[bool]:
 
 
 def set_json(json_type: str, obj_id: str, json_dict: dict) -> None:
-    json_cache = {
-        json_type: json_dict
-    }
+    json_cache = {json_type: json_dict}
     rc.json().set(f"{json_type}:{obj_id}", Path.root_path(), json_cache)
 
 

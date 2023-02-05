@@ -51,6 +51,7 @@ class TestTaskManager(ModelMixin):
         self.update_action(first_action_id, self.test_action_obj)
         task_manager_obj = self.expect_playback_success()
         expected_actions_processed = {
-            str(i): 1 if i == 0 or i == len(action_ids)-1 else 0 for i in range(len(action_ids))
+            str(i): 1 if i == 0 or i == len(action_ids) - 1 else 0
+            for i in range(len(action_ids))
         }
         assert task_manager_obj.actions_processed == expected_actions_processed

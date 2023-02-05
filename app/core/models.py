@@ -264,18 +264,20 @@ class JsonCollectionResource:
     def __init__(self, model_cls, testing=False):
         self.model_cls = model_cls
         test_dir = "test_" if testing else ""
-        self.collection_dir = resources_dir / f"{test_dir}{self.model_to_str()}s"
+        self.collection_dir = (
+            resources_dir / f"{test_dir}{self.model_to_str()}s"
+        )
         self.collection_dir.mkdir(exist_ok=True)
 
     def model_to_str(self) -> str:
-        return {Action: "action",
-                Task: "task",
-                Schedule: "schedule"}.get(self.model_cls)
+        return {Action: "action", Task: "task", Schedule: "schedule"}.get(
+            self.model_cls
+        )
 
     def get_collection(self, obj_id: str) -> dict:
         try:
             file_path = self.collection_dir / obj_id
-            with open(file_path, mode='r', encoding='utf-8') as f:
+            with open(file_path, mode="r", encoding="utf-8") as f:
                 obj = json.load(f)
             response = obj
             logging.debug(response)
@@ -284,13 +286,17 @@ class JsonCollectionResource:
             logging.debug(response)
         return response
 
-    def add_collection(self, obj: Union[Action, Task, Schedule]) -> Union[Action, Task, Schedule]:
+    def add_collection(
+        self, obj: Union[Action, Task, Schedule]
+    ) -> Union[Action, Task, Schedule]:
         try:
-            ids = [file_path.name for file_path in self.collection_dir.iterdir()]
+            ids = [
+                file_path.name for file_path in self.collection_dir.iterdir()
+            ]
             while obj.id in ids:
                 obj.id = str(uuid.uuid4())
             file_path = self.collection_dir / obj.id
-            with open(file_path, mode='w', encoding='utf-8') as f:
+            with open(file_path, mode="w", encoding="utf-8") as f:
                 json.dump(obj.dict(), f, indent=6)
             response = obj
             logging.debug(response)
@@ -299,14 +305,16 @@ class JsonCollectionResource:
             logging.debug(response)
         return response
 
-    def update_collection(self, obj_id: str, obj: Union[Action, Task, Schedule]) -> Union[Action, Task, Schedule]:
+    def update_collection(
+        self, obj_id: str, obj: Union[Action, Task, Schedule]
+    ) -> Union[Action, Task, Schedule]:
         response = {f"Error adding {self.model_to_str()} with id: {obj.id}"}
         try:
             ids = [filename for filename in self.collection_dir.iterdir()]
             while obj.id in ids:
                 obj.id = str(uuid.uuid4())
             file_path = self.collection_dir / obj.id
-            with open(file_path, mode='w', encoding='utf-8') as f:
+            with open(file_path, mode="w", encoding="utf-8") as f:
                 json.dump(obj.dict(), f, indent=6)
             if obj_id != obj.id:
                 old_file_path = self.collection_dir / obj_id
@@ -319,7 +327,10 @@ class JsonCollectionResource:
         return response
 
     def get_all_collections(self):
-        return {file_path.name: json.load(open(file_path)) for file_path in self.collection_dir.iterdir()}
+        return {
+            file_path.name: json.load(open(file_path))
+            for file_path in self.collection_dir.iterdir()
+        }
 
     def delete_collection(self, obj_id: str) -> dict:
         response = {"data": f"Deleted {self.model_to_str()} with id: {obj_id}"}

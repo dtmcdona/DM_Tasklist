@@ -8,6 +8,7 @@ from core.models import Action, Task, Schedule, JsonCollectionResource
 
 class TestModels:
     """Used to test actions, tasks, and schedule lists"""
+
     action_id1 = f"{uuid.uuid4()}1"
     action_id2 = f"{uuid.uuid4()}2"
     task_id = str(uuid.uuid4())
@@ -55,15 +56,15 @@ class TestModels:
         self.task_collection.add_collection(test_task_obj)
         test_schedule_obj = Schedule(**self.test_shedule)
         self.schedule_collection.add_collection(test_schedule_obj)
-        assert set(self.action_collection.get_collection(self.action_id1)) >= set(
-            self.test_action1
-        )
-        assert set(self.action_collection.get_collection(self.action_id2)) >= set(
-            self.test_action2
-        )
+        assert set(
+            self.action_collection.get_collection(self.action_id1)
+        ) >= set(self.test_action1)
+        assert set(
+            self.action_collection.get_collection(self.action_id2)
+        ) >= set(self.test_action2)
         assert set(self.task_collection.get_collection(self.task_id)) >= set(
             self.test_task
         )
-        assert set(self.schedule_collection.get_collection(self.schedule_id)) >= set(
-            self.test_shedule
-        )
+        assert set(
+            self.schedule_collection.get_collection(self.schedule_id)
+        ) >= set(self.test_shedule)

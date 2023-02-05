@@ -167,7 +167,9 @@ class ModelMixin:
                         cls.add_action(test_action_obj)
         cls.test_task = {
             "id": "test_task",
-            "action_id_list": [key for key in cls.get_action_collection().keys()],
+            "action_id_list": [
+                key for key in cls.get_action_collection().keys()
+            ],
         }
         cls.test_task_obj = models.Task(**cls.test_task)
         cls.update_task(cls.test_task_obj.id, cls.test_task_obj)

@@ -38,7 +38,8 @@ class TaskManager:
             else self.get_default_config()
         )
         self.actions_processed = {
-            str(index): 0 for index, action_id in enumerate(self.task.action_id_list)
+            str(index): 0
+            for index, action_id in enumerate(self.task.action_id_list)
         }
 
     def get_default_config(self) -> dict:
@@ -75,7 +76,9 @@ class TaskManager:
         new_task = self.task.dict()
         new_task.update(self.config)
         new_task_obj = Task(**new_task)
-        self.task = api_resources.storage.update_task(self.task.id, new_task_obj)
+        self.task = api_resources.storage.update_task(
+            self.task.id, new_task_obj
+        )
 
     def start_playback(self) -> dict:
         """Execute all actions in a task then save the config"""
@@ -97,7 +100,7 @@ class TaskManager:
             index += 1
             if not action:
                 continue
-            self.actions_processed[str(index-1)] += 1
+            self.actions_processed[str(index - 1)] += 1
 
             if len(celery_schedulers) > index:
                 if (
