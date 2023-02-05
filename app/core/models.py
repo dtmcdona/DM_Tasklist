@@ -21,9 +21,7 @@ Models:
 import datetime
 import json
 import logging
-import os
 import uuid
-from os.path import exists
 from pathlib import Path
 from typing import List, Optional, Any, Union
 
@@ -31,9 +29,9 @@ from pydantic import BaseModel
 from pydantic.types import Json
 
 base_dir = Path(".").absolute()
-resources_dir = os.path.join(base_dir, "resources")
-if not os.path.isdir(resources_dir):
-    resources_dir = os.path.join(base_dir, "core", "resources")
+resources_dir = base_dir / "resources"
+if not resources_dir.is_dir():
+    resources_dir = base_dir / "core" / "resources"
 logging.basicConfig(level=logging.DEBUG)
 
 
@@ -209,19 +207,19 @@ class JsonResource:
         if not best_match:
             return None
         elif best_match.get("model") == "Image":
-            obj_dir = os.path.join(resources_dir, "images")
+            obj_dir = resources_dir / "images"
             try:
                 return Image(**input_dict), obj_dir
             except Exception:
                 return None
         elif best_match.get("model") == "ScreenObject":
-            obj_dir = os.path.join(resources_dir, "screen_data")
+            obj_dir = resources_dir / "screen_data"
             try:
                 return ScreenObject(**input_dict), obj_dir
             except Exception:
                 return None
         elif best_match.get("model") == "ScreenData":
-            obj_dir = os.path.join(resources_dir, "screen_data")
+            obj_dir = resources_dir / "screen_data"
             try:
                 return ScreenData(**input_dict), obj_dir
             except Exception:
@@ -229,7 +227,7 @@ class JsonResource:
 
     def store_resource(self) -> dict:
         file_name = f"{self.obj.id}.json"
-        file_path = os.path.join(self.obj_dir, file_name)
+        file_path = self.obj_dir / file_name
         response = {"data": f"Saved: {file_name}"}
         with open(file_path, "w", encoding="utf-8") as file:
             json.dump(self.obj.dict(), file, indent=6)
@@ -238,25 +236,25 @@ class JsonResource:
 
     def load_resource(self) -> dict:
         file_name = f"{self.obj.id}.json"
-        file_path = os.path.join(self.obj_dir, file_name)
+        file_path = self.obj_dir / file_name
         response = {"data": f"Loaded: {file_name}"}
         obj_json = None
-        if exists(file_path):
+        try:
             with open(file_path, "r", encoding="utf-8") as file:
                 obj_json = json.loads(file.read())
                 logging.debug(obj_json)
-        else:
+        except OSError:
             response = {"data": f"File does not exist: {file_path}"}
-        logging.debug(response)
+            logging.debug(response)
         return obj_json
 
     def delete_resource(self) -> dict:
         file_name = f"{self.obj.id}.json"
-        file_path = os.path.join(self.obj_dir, file_name)
+        file_path = self.obj_dir / file_name
         response = {"data": f"Deleted: {file_path}"}
-        if exists(file_path):
-            os.remove(file_path)
-        else:
+        try:
+            file_path.unlink()
+        except OSError:
             response = {"data": f"File does not exist: {file_path}"}
         logging.debug(response)
         return response
@@ -265,96 +263,72 @@ class JsonResource:
 class JsonCollectionResource:
     def __init__(self, model_cls, testing=False):
         self.model_cls = model_cls
-        self.json_collection = {}
-        test_file = "test_" if testing else ""
-        if self.model_cls == Action:
-            self.file_path = os.path.join(
-                resources_dir, f"{test_file}action_collection.json"
-            )
-        elif self.model_cls == Task:
-            self.file_path = os.path.join(
-                resources_dir, f"{test_file}task_collection.json"
-            )
-        elif self.model_cls == Schedule:
-            self.file_path = os.path.join(
-                resources_dir, f"{test_file}schedule_collection.json"
-            )
-        if exists(self.file_path):
-            self.load_collection()
-        else:
-            self.save_collection()
+        test_dir = "test_" if testing else ""
+        self.collection_dir = resources_dir / f"{test_dir}{self.model_to_str()}s"
+        self.collection_dir.mkdir(exist_ok=True)
 
     def model_to_str(self) -> str:
-        if self.model_cls == Action:
-            return "Action"
-        elif self.model_cls == Task:
-            return "Task"
-        elif self.model_cls == Schedule:
-            return "Schedule"
+        return {Action: "action",
+                Task: "task",
+                Schedule: "schedule"}.get(self.model_cls)
 
     def get_collection(self, obj_id: str) -> dict:
-        obj = self.json_collection.get(obj_id)
-        if obj:
+        try:
+            file_path = self.collection_dir / obj_id
+            with open(file_path, mode='r', encoding='utf-8') as f:
+                obj = json.load(f)
             response = obj
-        else:
+            logging.debug(response)
+        except OSError:
             response = {"data": f"{self.model_to_str()} not found."}
+            logging.debug(response)
         return response
 
     def add_collection(self, obj: Union[Action, Task, Schedule]) -> Union[Action, Task, Schedule]:
-        response = {f"Error adding {self.model_to_str()} with id: {obj.id}"}
-        if self.json_collection not in [None, {}]:
-            ids = self.json_collection.keys()
+        try:
+            ids = [file_path.name for file_path in self.collection_dir.iterdir()]
             while obj.id in ids:
                 obj.id = str(uuid.uuid4())
-
-            self.json_collection[obj.id] = obj.dict()
-            self.save_collection()
+            file_path = self.collection_dir / obj.id
+            with open(file_path, mode='w', encoding='utf-8') as f:
+                json.dump(obj.dict(), f, indent=6)
             response = obj
-            logging.debug(f"Added {self.model_to_str()} with id: {obj.id}")
-        else:
-            self.json_collection = {obj.id: obj.dict()}
-            response = obj
-            self.save_collection()
-            logging.debug(f"Added {self.model_to_str()} with id: {obj.id}")
+            logging.debug(response)
+        except OSError:
+            response = {f"Error adding {self.model_to_str()} with id: {obj.id}"}
+            logging.debug(response)
         return response
 
     def update_collection(self, obj_id: str, obj: Union[Action, Task, Schedule]) -> Union[Action, Task, Schedule]:
-        ids = self.json_collection.keys()
-        if obj_id not in ids:
-            response = {"data": "Invalid ID entered."}
+        response = {f"Error adding {self.model_to_str()} with id: {obj.id}"}
+        try:
+            ids = [filename for filename in self.collection_dir.iterdir()]
+            while obj.id in ids:
+                obj.id = str(uuid.uuid4())
+            file_path = self.collection_dir / obj.id
+            with open(file_path, mode='w', encoding='utf-8') as f:
+                json.dump(obj.dict(), f, indent=6)
+            if obj_id != obj.id:
+                old_file_path = self.collection_dir / obj_id
+                old_file_path.unlink(missing_ok=True)
+            response = obj
+            logging.debug(f"Updated {self.model_to_str()} with id: {obj.id}")
+        except OSError:
+            response = {f"Error adding {self.model_to_str()} with id: {obj.id}"}
             logging.debug(response)
-            return response
-        self.json_collection[obj_id] = obj.dict()
-        self.save_collection()
-        logging.debug(f"Updated {self.model_to_str()} with id: {obj_id}")
-        return obj
+        return response
 
-    def load_collection(self) -> None:
-        self.json_collection = {}
-        if exists(self.file_path):
-            with open(self.file_path, "r", encoding="utf-8") as file:
-                self.json_collection = json.loads(file.read())
-            logging.debug(self.json_collection)
-            logging.debug(f"Loaded {self.model_to_str()} collection")
-        else:
-            logging.debug(
-                f"{self.model_to_str()} does not exist: " + self.file_path
-            )
-
-    def save_collection(self) -> None:
-        with open(self.file_path, "w", encoding="utf-8") as file:
-            json.dump(self.json_collection, file, indent=6)
-            logging.debug(f"Saved {self.model_to_str()} collection")
+    def get_all_collections(self):
+        return {file_path.name: json.load(open(file_path)) for file_path in self.collection_dir.iterdir()}
 
     def delete_collection(self, obj_id: str) -> dict:
         response = {"data": f"Deleted {self.model_to_str()} with id: {obj_id}"}
         try:
-            del self.json_collection[obj_id]
-            logging.debug(response)
-            self.save_collection()
-        except KeyError:
+            file_path = self.collection_dir / obj_id
+            file_path.unlink()
+        except FileNotFoundError:
             response = {
                 "data": f"{self.model_to_str()} does not exist: {obj_id}"
             }
-        finally:
-            return response
+        logging.debug(response)
+        return response

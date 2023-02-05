@@ -20,14 +20,14 @@ class TestTaskManager(ModelMixin):
             for action_id in self.test_task_obj.action_id_list
         ]
         task_manager_obj.get_default_config()
-        # assert task_manager_obj.config == self.get_default_config_mock()
         assert task_manager_obj.start_playback() == {"data": "Task complete"}
         return task_manager_obj
 
     def test_start_playback__no_conditionals(self):
+        action_ids = self.get_action_ids()
         self.expect_playback_success()
         task_manager_obj = self.expect_playback_success()
-        expected_actions_processed = {str(i): 1 for i in range(9)}
+        expected_actions_processed = {str(i): 1 for i in range(len(action_ids))}
         assert task_manager_obj.actions_processed == expected_actions_processed
 
     def test_start_playback__skip_to_id(self):
@@ -51,6 +51,6 @@ class TestTaskManager(ModelMixin):
         self.update_action(first_action_id, self.test_action_obj)
         task_manager_obj = self.expect_playback_success()
         expected_actions_processed = {
-            str(i): 1 if i == 0 or i == len(action_ids)-1 else 0 for i in range(9)
+            str(i): 1 if i == 0 or i == len(action_ids)-1 else 0 for i in range(len(action_ids))
         }
         assert task_manager_obj.actions_processed == expected_actions_processed

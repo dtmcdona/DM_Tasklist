@@ -61,7 +61,7 @@ class APICollections:
         return response
 
     def get_action_collection(self) -> dict:
-        return self.action_collection.json_collection
+        return self.action_collection.get_all_collections()
 
     def update_action(self, action_id: str, action: models.Action) -> models.Action:
         response = self.action_collection.update_collection(action_id, action)
@@ -81,7 +81,7 @@ class APICollections:
         return self.task_collection.get_collection(task_id)
 
     def get_task_collection(self) -> dict:
-        return self.task_collection.json_collection
+        return self.task_collection.get_all_collections()
 
     def update_task(self, task_id: str, task: models.Task) -> models.Task:
         return self.task_collection.update_collection(task_id, task)
@@ -93,7 +93,7 @@ class APICollections:
         return self.schedule_collection.get_collection(schedule_id)
 
     def get_schedule_collection(self) -> dict:
-        return self.schedule_collection.json_collection
+        return self.schedule_collection.get_all_collections()
 
     def update_schedule(self, schedule_id, schedule) -> models.Schedule:
         return self.schedule_collection.update_collection(schedule_id, schedule)

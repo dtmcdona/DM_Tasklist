@@ -13,7 +13,7 @@ import datetime
 import json
 import logging
 import os
-import pathlib
+from pathlib import Path
 import random
 import subprocess
 import time
@@ -39,11 +39,7 @@ import pyautogui
 """Virtual display"""
 pyautogui._pyautogui_x11._display = Xlib.display.Display(os.environ["DISPLAY"])
 
-base_dir = pathlib.Path(".").absolute()
-resources_dir = os.path.join(base_dir, "resources")
-if not os.path.isdir(resources_dir):
-    resources_dir = os.path.join(base_dir, "core", "resources")
-image_dir = os.path.join(resources_dir, "images")
+image_dir = models.resources_dir / "images"
 screen_width, screen_height = pyautogui.size()
 logging.basicConfig(level=logging.DEBUG)
 
@@ -75,13 +71,11 @@ def open_browser(url: str) -> dict:
     except Exception as ex:
         logging.debug(ex)
     # Time it takes for webbrowser to open and render to xvfb
-    black_screen = os.path.join(
-        models.resources_dir, "screenshot", "black_screen.json"
-    )
+    black_screen = models.resources_dir / "screenshot" / "black_screen.json"
     response = {}
     time.sleep(1)
     logging.debug(black_screen)
-    if os.path.exists(black_screen):
+    if black_screen.is_file():
         with open(black_screen, "r", encoding="utf-8") as file:
             black_screen_json = json.loads(file.read())
             response = screen_shot()
@@ -419,16 +413,15 @@ def image_search(
         delete_haystack_file: bool = True
 ) -> Tuple[int, int]:
     """Search for 'needle' image in a 'haystack' image and return (x, y) coords"""
-    print(needle_file_name)
-    needle_file_path = os.path.join(image_dir, needle_file_name)
+    needle_file_path = str(image_dir / needle_file_name)
     needle = cv2.imread(needle_file_path, cv2.IMREAD_UNCHANGED)
     grayscale_needle = cv2.cvtColor(needle, cv2.COLOR_BGR2GRAY)
     if haystack_file_name in ["", None]:
         image_id = uuid.uuid4()
-        haystack_file_path = os.path.join(image_dir, f"{image_id}.png")
+        haystack_file_path = str(image_dir / f"{image_id}.png")
         pyautogui.screenshot(haystack_file_path)
     else:
-        haystack_file_path = os.path.join(image_dir, haystack_file_name)
+        haystack_file_path = str(image_dir / haystack_file_name)
     haystack = cv2.imread(haystack_file_path, cv2.IMREAD_UNCHANGED)
     grayscale_haystack = cv2.cvtColor(haystack, cv2.COLOR_BGR2GRAY)
     result = cv2.matchTemplate(
@@ -445,8 +438,8 @@ def image_search(
     """Keep track of all matches and identify unique cases"""
     matches = []
     """Delete haystack image since it is a representation of current screen"""
-    if delete_haystack_file and os.path.exists(haystack_file_path):
-        os.remove(haystack_file_path)
+    if delete_haystack_file:
+        Path(haystack_file_path).unlink(missing_ok=True)
     if len(xloc) > 0:
         # logging.debug("There are {0} total matches in the haystack.".format(len(xloc)))
         for (x, y) in zip(xloc, yloc):
@@ -467,23 +460,15 @@ def image_search(
 
 
 def capture_screen_data(
-        x1: int, y1: int, x2: int, y2: int, action_id: int, testing: bool = False
+        x1: int, y1: int, x2: int, y2: int, action_id: str, testing: bool = False
 ) -> dict:
     """This function captures data within the region within (x1, y1) and (x2, y2)"""
     response = {"data": "Screen data not captured"}
     screenshot_id = str(uuid.uuid4())
-    base_dir = pathlib.Path(".").absolute()
-    resources_dir = os.path.join(base_dir, "resources", "screenshot")
-    if not os.path.isdir(resources_dir):
-        resources_dir = os.path.join(
-            base_dir, "core", "resources", "screenshot"
-        )
-    screenshot_path = os.path.join(resources_dir, f"{screenshot_id}.png")
+    screenshot_path = str(models.resources_dir / "screenshot" / f"{screenshot_id}.png")
     pyautogui.screenshot(screenshot_path)
     if testing:
-        test_image = os.path.join(
-            models.resources_dir, "images", "test_image.png"
-        )
+        test_image = str(models.resources_dir / "images" / "test_image.png")
         img = cv2.imread(test_image)
     else:
         img = cv2.imread(screenshot_path)
@@ -501,14 +486,13 @@ def capture_screen_data(
     thr = cv2.threshold(gry, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
     cv2.imwrite(screenshot_path, thr)
     """There might be some case where inverting the image gives better results"""
-    # screenshot_path = os.path.join(resources_dir, f'invert_{screenshot_id}.png')
+    # screenshot_path = resources_dir / f"invert_{screenshot_id}.png"
     # inverted_thr = cv2.bitwise_not(thr)
     # cv2.imwrite(screenshot_path, inverted_thr)
     # inverted_img_data = pytesseract.image_to_data(thr)
     img_data = pytesseract.image_to_data(thr)
     timestamp = datetime.datetime.now().isoformat()
-    if os.path.exists(screenshot_path):
-        os.remove(screenshot_path)
+    Path(screenshot_path).unlink(missing_ok=True)
 
     count = 0
     screen_obj_ids = []
@@ -533,17 +517,15 @@ def capture_screen_data(
                     int(word[9]),
                 )
                 if (
-                        action_id >= len(api_resources.storage.action_collection.json_collection)
-                        or action_id < 0
+                        action_id in api_resources.storage.action_collection.get_all_collections()
                 ):
-                    word_action_id = None
-                else:
                     word_action_id = action_id
+                else:
+                    word_action_id = None
                 data_type = (
-                    "text"
-                    if action_id >= len(api_resources.storage.action_collection.json_collection)
-                       or action_id < 0
-                    else "button"
+                    "button"
+                    if action_id in api_resources.storage.action_collection.get_all_collections()
+                    else "text"
                 )
                 """Screen objects are data that store information from 
                     GUI elements and/or actions"""
@@ -598,7 +580,7 @@ def capture_screen_data(
         }
         return test_result_dict
     elif (
-            action_id >= len(api_resources.storage.action_collection.json_collection) or action_id < 0
+            action_id not in api_resources.storage.action_collection.get_all_collections()
     ):
         """Create new action"""
         variables = [
@@ -634,14 +616,10 @@ def capture_screen_data(
 def screen_snip(x1: int, y1: int, x2: int, y2: int, image: models.Image) -> dict:
     """This function is used to capture a section of the screen and
     store in resources/images as png and json files"""
-    base_dir = pathlib.Path(".").absolute()
-    image_dir = os.path.join(base_dir, "resources", "images")
-    if not os.path.isdir(image_dir):
-        image_dir = os.path.join(base_dir, "core", "resources", "images")
     base64str = image.base64str
     decoded64str = base64.b64decode(base64str)
     image_id = uuid.uuid4()
-    image_path = os.path.join(image_dir, f"{image_id}.png")
+    image_path = str(image_dir / f"{image_id}.png")
     with open(image_path, "wb") as f:
         f.write(decoded64str)
     img = cv2.imread(image_path)
@@ -673,25 +651,19 @@ def screen_snip(x1: int, y1: int, x2: int, y2: int, image: models.Image) -> dict
 def screen_shot() -> dict:
     """This function uses the current display and returns a base-64 image"""
     timestamp = round(time.time() * 1000)
-    base_dir = pathlib.Path(".").absolute()
-    resources_dir = os.path.join(base_dir, "resources", "screenshot")
-    if not os.path.isdir(resources_dir):
-        resources_dir = os.path.join(
-            base_dir, "core", "resources", "screenshot"
-        )
-    screenshot_path = os.path.join(resources_dir, f"screenshot_{timestamp}.png")
+    screenshot_path = models.resources_dir / "screenshot" / f"screenshot_{timestamp}.png"
     pyautogui.screenshot(screenshot_path)
-    img = cv2.imread(screenshot_path)
+    img = cv2.imread(str(screenshot_path))
     png_img = cv2.imencode(".png", img)
     b64_string = base64.b64encode(png_img[1]).decode("utf-8")
-    if os.path.exists(screenshot_path):
-        os.remove(screenshot_path)
+    screenshot_path.unlink()
     response = {"data": b64_string}
     return response
 
 
 def save_screenshot() -> str:
+    """This is used by the task manager to pass screenshots to the celery workers"""
     file_name = f"{uuid.uuid4()}.png"
-    haystack_file_path = os.path.join(image_dir, file_name)
-    pyautogui.screenshot(haystack_file_path)
+    file_path = image_dir / file_name
+    pyautogui.screenshot(file_path)
     return file_name

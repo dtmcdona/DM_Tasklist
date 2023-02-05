@@ -1,5 +1,6 @@
 import logging
-import os
+from pathlib import Path
+from shutil import rmtree
 import uuid
 
 from core.models import Action, Task, Schedule, JsonCollectionResource
@@ -40,9 +41,9 @@ class TestModels:
 
     @classmethod
     def teardown_method(cls):
-        os.remove(cls.action_collection.file_path)
-        os.remove(cls.task_collection.file_path)
-        os.remove(cls.schedule_collection.file_path)
+        rmtree(cls.action_collection.collection_dir)
+        rmtree(cls.task_collection.collection_dir)
+        rmtree(cls.schedule_collection.collection_dir)
 
     def test_json_collection_resource(self):
         test_action_obj1 = Action(**self.test_action1)
@@ -54,9 +55,6 @@ class TestModels:
         self.task_collection.add_collection(test_task_obj)
         test_schedule_obj = Schedule(**self.test_shedule)
         self.schedule_collection.add_collection(test_schedule_obj)
-        self.action_collection.load_collection()
-        self.task_collection.load_collection()
-        self.schedule_collection.load_collection()
         assert set(self.action_collection.get_collection(self.action_id1)) >= set(
             self.test_action1
         )

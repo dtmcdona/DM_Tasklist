@@ -23,8 +23,8 @@ refresh:
 tests:
 	sudo docker compose run app pytest -vv
 
-clear_imgs:
-	python3 clear_images.py
+clear_img_data:
+	python3 clear_img_data.py
 
 reset_collections:
-	python3 reset_collections.py
+	sudo python3 reset_collections.py

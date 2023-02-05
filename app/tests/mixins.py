@@ -3,7 +3,7 @@ from logging import DEBUG
 import os
 import pathlib
 import shutil
-import uuid
+from shutil import rmtree
 from itertools import product
 from typing import List
 
@@ -170,7 +170,7 @@ class ModelMixin:
             "action_id_list": [key for key in cls.get_action_collection().keys()],
         }
         cls.test_task_obj = models.Task(**cls.test_task)
-        cls.update_task(0, cls.test_task_obj)
+        cls.update_task(cls.test_task_obj.id, cls.test_task_obj)
 
     @pytest.fixture(autouse=True)
     def setup_picture_files(self):
@@ -184,7 +184,8 @@ class ModelMixin:
     @classmethod
     def teardown_class(cls):
         redis_cache.rc.flushdb()
-        os.remove(cls.action_collection.file_path)
+        rmtree(cls.action_collection.collection_dir)
+        rmtree(cls.task_collection.collection_dir)
         file_types = ["png", "json"]
         for image_id in cls.delete_image_files:
             for file_type in file_types:
@@ -200,16 +201,6 @@ class ModelMixin:
             )
             if os.path.exists(test_image):
                 os.remove(test_image)
-        test_task_collection = os.path.join(
-            models.resources_dir, "test_task_collection.json"
-        )
-        if os.path.exists(test_task_collection):
-            os.remove(test_task_collection)
-        test_schedule_collection = os.path.join(
-            models.resources_dir, "test_schedule_collection.json"
-        )
-        if os.path.exists(test_schedule_collection):
-            os.remove(test_schedule_collection)
         cls.clear_images()
 
     def add_actions_to_task(self) -> None:
