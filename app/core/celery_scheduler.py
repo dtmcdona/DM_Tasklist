@@ -19,7 +19,6 @@ import threading
 import time
 import uuid
 import datetime as dt
-from collections import deque
 from typing import Optional
 
 from . import celery_worker, models, process_controller, redis_cache
@@ -37,7 +36,7 @@ class CeleryScheduler:
         self.action = action
         self.job_creation_delta_time = task.job_creation_delta_time
         self.max_num_jobs = task.max_num_celery_jobs
-        self.job_schedule = deque([])
+        self.job_schedule = []
         self.cache_key_list = []
         self.result_due_date = result_due_datetime
         self.cancel_threads = threading.Event()
@@ -91,13 +90,13 @@ class CeleryScheduler:
             self.create_job(job_num, job_start_time)
 
     def create_job_schedule(self) -> None:
-        self.job_schedule = deque()
+        self.job_schedule = []
         for job_num in range(self.max_num_jobs):
             job_start_time = self.result_due_date - dt.timedelta(
                 seconds=job_num * self.job_creation_delta_time
             )
             if job_start_time > dt.datetime.now():
-                self.job_schedule.appendleft(job_start_time)
+                self.job_schedule.append(job_start_time)
 
         self.cache_key_list = [
             f"{self.schedule_id}-{job_num}"
