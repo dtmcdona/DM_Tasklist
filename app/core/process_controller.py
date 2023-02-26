@@ -18,7 +18,7 @@ import random
 import subprocess
 import time
 import uuid
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Any
 
 import cv2
 import enchant
@@ -44,12 +44,12 @@ screen_width, screen_height = pyautogui.size()
 logging.basicConfig(level=logging.DEBUG)
 
 
-def mouse_up(mouse_button: str="left"):
+def mouse_up(mouse_button: str = "left"):
     """Mouse button up"""
     pyautogui.mouseUp(button=mouse_button)
 
 
-def mouse_down(mouse_button: str="left"):
+def mouse_down(mouse_button: str = "left"):
     """Mouse button down"""
     pyautogui.mouseDown(button=mouse_button)
 
@@ -78,17 +78,19 @@ def open_browser(url: str) -> dict:
     if black_screen.is_file():
         with open(black_screen, "r", encoding="utf-8") as file:
             black_screen_json = json.loads(file.read())
-            response = screen_shot()
+            response = screen_shot_response()
             while response.get("data") == black_screen_json.get("data"):
                 time.sleep(1)
-                response = screen_shot()
+                response = screen_shot_response()
                 logging.debug(
                     response.get("data") == black_screen_json.get("data")
                 )
     return response
 
 
-def evaluate_conditional(condition: str, variable_value: str, comparison_value: Optional[str] = None) -> Optional[bool]:
+def evaluate_conditional(
+    condition: str, variable_value: str, comparison_value: Optional[str] = None
+) -> Optional[bool]:
     """Comparison value is provided by user and the variable_value is from
     capture_screen_data action"""
     if condition not in constants.CONDITIONALS:
@@ -112,10 +114,10 @@ def evaluate_conditional(condition: str, variable_value: str, comparison_value: 
             else:
                 return False
     if (
-            condition == "if"
-            and variable_value
-            or condition == "if_not"
-            and not variable_value
+        condition == "if"
+        and variable_value
+        or condition == "if_not"
+        and not variable_value
     ):
         return True
     elif condition == "if" or condition == "if_not" and variable_value:
@@ -133,143 +135,167 @@ def process_action(action: models.Action, time_delay=True) -> dict:
     if not isinstance(action, dict):
         action = action.dict()
     response = {"data": f'Error with action_id:{action.get("id")}'}
+    if action.get("function") in ["", None]:
+        return response
     if time_delay and action.get("time_delay") not in [0.0, None]:
         delay = float(action["time_delay"])
         time.sleep(delay)
-    if action.get("function") not in ["", None]:
-        x = -1
-        y = -1
-        x1 = None
-        x2 = None
-        y1 = None
-        y2 = None
-        random_range = (
-            0
-            if action.get("random_range") in [0, None]
-            else action["random_range"]
-        )
-        random_delay = (
-            0.0
-            if action.get("random_delay") in [0.0, None]
-            else float(action["random_delay"])
-        )
-        if action.get("images") not in [[], None]:
-            needle_file_name = action["images"][0]
-            if len(action.get("images")) > 1 and action.get("images")[1] not in ["", None]:
-                haystack_file_name = action["images"][1]
+    x = -1
+    y = -1
+    x1 = None
+    x2 = None
+    y1 = None
+    y2 = None
+    random_range = (
+        0
+        if action.get("random_range") in [0, None]
+        else action["random_range"]
+    )
+    random_delay = (
+        0.0
+        if action.get("random_delay") in [0.0, None]
+        else float(action["random_delay"])
+    )
+    if action.get("images") not in [[], None]:
+        needle_file_name = action["images"][0]
+        percent_similarity = 0.9
+        if action.get("function") == "click_image_region":
+            if action.get("haystack_image") not in ["", None]:
+                # This is only used for testing
+                haystack_file_name = action["haystack_image"]
+                delete_haystack_file = False
             else:
-                haystack_file_name = ""
-            percent_similarity = 0.9
+                haystack_file_name = screenshot_snip(
+                    action.get("x1"),
+                    action.get("y2"),
+                    action.get("x2"),
+                    action.get("y2"),
+                )
+                delete_haystack_file = True
             x, y = image_search(
                 needle_file_name=needle_file_name,
                 haystack_file_name=haystack_file_name,
                 percent_similarity=percent_similarity,
-                delete_haystack_file=False
+                delete_haystack_file=delete_haystack_file,
             )
-        if action.get("x2") not in [-1, None] and action.get("y2") not in [
+            if x != -1 and y != -1:
+                x += action.get("x1")
+                y += action.get("y1")
+        else:
+            if action.get("haystack_image") not in ["", None]:
+                haystack_file_name = action["haystack_image"]
+            else:
+                haystack_file_name = ""
+            x, y = image_search(
+                needle_file_name=needle_file_name,
+                haystack_file_name=haystack_file_name,
+                percent_similarity=percent_similarity,
+                delete_haystack_file=False,
+            )
+    if action.get("x2") not in [-1, None] and action.get("y2") not in [
+        -1,
+        None,
+    ]:
+        if action.get("x1") in [-1, None] or action.get("y1") in [
             -1,
             None,
         ]:
-            if action.get("x1") in [-1, None] or action.get("y1") in [
-                -1,
-                None,
-            ]:
-                logging.error(response)
-                return response
-            x1 = action["x1"]
-            y1 = action["y1"]
-            x2 = action["x2"]
-            y2 = action["y2"]
-            x_range = x2 - x1
-            y_range = y2 - y1
-            if action.get("random_range") not in [0, None]:
-                # This fixes any errors with random mouse click range with
-                # region click
-                if x_range > random_range * 2:
-                    x1 = x1 + random_range
-                    x2 = x2 - random_range
-                elif x_range < random_range and x_range > 4:
-                    random_range = 1
-                    x1 = x1 + random_range
-                    x2 = x2 - random_range
-                else:
-                    random_range = 0
-                if y_range > random_range * 2:
-                    y1 = y1 + random_range
-                    y2 = y2 - random_range
-                elif y_range < random_range and y_range > 4:
-                    random_range = 1
-                    y1 = y1 + random_range
-                    y2 = y2 - random_range
-                else:
-                    random_range = 0
-            x = random.randrange(x1, x2)
-            y = random.randrange(y1, y2)
-        elif action.get("x1") not in [-1, None] and action.get("y1") not in [
-            -1,
-            None,
-        ]:
-            x = action["x1"]
-            y = action["y1"]
-        if action["function"] == "click" or action["function"] == "click_image":
-            if x == -1 or y == -1:
-                logging.debug(response)
-                return response
-            if action.get("random_path") not in [False, None]:
-                random_mouse.random_move(x=x, y=y)
-            if action.get("random_range") not in [0, None] or action.get(
-                    "random_delay"
-            ) not in [0.0, None]:
-                random_mouse.random_click(
-                    x=x,
-                    y=y,
-                    rand_range=random_range,
-                    delay_duration=random_delay,
-                )
+            logging.error(response)
+            return response
+        x1 = action["x1"]
+        y1 = action["y1"]
+        x2 = action["x2"]
+        y2 = action["y2"]
+        x_range = x2 - x1
+        y_range = y2 - y1
+        if random_range != 0:
+            # This fixes any errors with random mouse click range with
+            # region click
+            if x_range > random_range * 2:
+                x1 = x1 + random_range
+                x2 = x2 - random_range
+            elif x_range < random_range and x_range > 4:
+                random_range = 1
+                x1 = x1 + random_range
+                x2 = x2 - random_range
             else:
-                pyautogui.click(x, y)
-            response = {"data": f"Mouse clicked: ({x}, {y})"}
-        elif (
-                action["function"] == "move_to"
-                or action["function"] == "move_to_image"
-        ):
-            if x == -1 or y == -1:
-                logging.debug(response)
-                return response
-            if action.get("random_path") not in [False, None]:
-                random_mouse.random_move(x=x, y=y)
+                random_range = 0
+            if y_range > random_range * 2:
+                y1 = y1 + random_range
+                y2 = y2 - random_range
+            elif y_range < random_range and y_range > 4:
+                random_range = 1
+                y1 = y1 + random_range
+                y2 = y2 - random_range
             else:
-                pyautogui.moveTo(x=x, y=y)
-            response = {"data": f"Mouse moved to: ({x}, {y})"}
-        elif action["function"] == "key_pressed" and action.get(
-                "key_pressed"
-        ) not in [
-            "",
-            None,
-        ]:
-            action_key = action["key_pressed"]
-            keypress(action_key)
-            response = {"data": f"Key pressed {action_key}"}
-        elif action["function"] == "capture_screen_data":
-            if x1 and x2 and y1 and y2:
-                action_id = action.get("id")
-                response = capture_screen_data(
-                    x1=x1, y1=y1, x2=x2, y2=y2, action_id=action_id
-                )
+                random_range = 0
+        x = random.randrange(x1, x2)
+        y = random.randrange(y1, y2)
+    elif action.get("x1") not in [-1, None] and action.get("y1") not in [
+        -1,
+        None,
+    ]:
+        x = action["x1"]
+        y = action["y1"]
+    if action["function"] in ("click", "click_image", "click_image_region"):
+        if x == -1 or y == -1:
+            logging.debug(response)
+            return response
+        if action.get("random_path") not in [False, None]:
+            random_mouse.random_move(x=x, y=y)
+        if action.get("random_range") not in [0, None] or action.get(
+            "random_delay"
+        ) not in [0.0, None]:
+            random_mouse.random_click(
+                x=x,
+                y=y,
+                rand_range=random_range,
+                delay_duration=random_delay,
+            )
+        else:
+            pyautogui.click(x, y)
+        response = {"data": f"Mouse clicked: ({x}, {y})"}
+    elif action["function"] in ("move_to", "move_to_image"):
+        if x == -1 or y == -1:
+            logging.debug(response)
+            return response
+        if action.get("random_path") not in [False, None]:
+            random_mouse.random_move(x=x, y=y)
+        else:
+            pyautogui.moveTo(x=x, y=y)
+        response = {"data": f"Mouse moved to: ({x}, {y})"}
+    elif action["function"] == "key_pressed" and action.get(
+        "key_pressed"
+    ) not in [
+        "",
+        None,
+    ]:
+        action_key = action["key_pressed"]
+        keypress(action_key)
+        response = {"data": f"Key pressed {action_key}"}
+    elif action["function"] == "capture_screen_data":
+        if x1 and x2 and y1 and y2:
+            action_id = action.get("id")
+            response = capture_screen_data(
+                x1=x1, y1=y1, x2=x2, y2=y2, action_id=action_id
+            )
     return response
 
 
-def get_conditionals_result(action: models.Action, screenshot_file: str = None) -> bool:
+def get_conditionals_result(
+    action: models.Action, screenshot_file: str = None
+) -> bool:
     conditionals_result = True
     image_conditions = action.get("image_conditions")
     variable_conditions = action.get("variable_conditions")
     if image_conditions:
         """Image conditionals are specific to png information"""
         images = action.get("images")
+        haystack_image = action.get("haystack_image")
         for condition in image_conditions:
             needle_file_name = images[0]
-            if images[1] not in ["", None]:
-                haystack_file_name = action["images"][1]
+            if haystack_image not in ["", None]:
+                haystack_file_name = haystack_image
             else:
                 haystack_file_name = screenshot_file
             conditionals_result = conditionals_result and evaluate_conditional(
@@ -302,7 +328,9 @@ def get_conditionals_result(action: models.Action, screenshot_file: str = None) 
     return conditionals_result
 
 
-def action_controller(action: models.Action, prefetched_condition_result: bool = None) -> dict:
+def action_controller(
+    action: models.Action, prefetched_condition_result: bool = None
+) -> dict:
     """This controller manages different outcomes of the action's conditional
     and then processes the given action"""
     if not isinstance(action, dict):
@@ -332,15 +360,17 @@ def action_controller(action: models.Action, prefetched_condition_result: bool =
                 conditionals_true = get_conditionals_result(action)
             if "repeat" in action.get(f"{conditionals_true}_case".lower()):
                 if (
-                        action.get(f"{conditionals_true}_case".lower())
-                        == "sleep_and_repeat"
+                    action.get(f"{conditionals_true}_case".lower())
+                    == "sleep_and_repeat"
                 ):
                     time.sleep(action.get("sleep_duration"))
                 num_repeats = 1
             else:
                 if action.get(f"{conditionals_true}_case".lower()) == "sleep":
                     time.sleep(action.get("sleep_duration"))
-                response = {"data": action.get(f"{conditionals_true}_case".lower())}
+                response = {
+                    "data": action.get(f"{conditionals_true}_case".lower())
+                }
                 break
         else:
             """Action without conditional"""
@@ -407,10 +437,10 @@ def mouse_move(x: int, y: int, duration: float = 0.0) -> dict:
 
 
 def image_search(
-        needle_file_name: str,
-        haystack_file_name: str = "",
-        percent_similarity: float = 0.9,
-        delete_haystack_file: bool = True
+    needle_file_name: str,
+    haystack_file_name: str = "",
+    percent_similarity: float = 0.9,
+    delete_haystack_file: bool = True,
 ) -> Tuple[int, int]:
     """Search for 'needle' image in a 'haystack' image and return (x, y) coords"""
     needle_file_path = str(image_dir / needle_file_name)
@@ -460,12 +490,14 @@ def image_search(
 
 
 def capture_screen_data(
-        x1: int, y1: int, x2: int, y2: int, action_id: str, testing: bool = False
+    x1: int, y1: int, x2: int, y2: int, action_id: str, testing: bool = False
 ) -> dict:
     """This function captures data within the region within (x1, y1) and (x2, y2)"""
     response = {"data": "Screen data not captured"}
     screenshot_id = str(uuid.uuid4())
-    screenshot_path = str(models.resources_dir / "screenshot" / f"{screenshot_id}.png")
+    screenshot_path = str(
+        models.resources_dir / "screenshot" / f"{screenshot_id}.png"
+    )
     pyautogui.screenshot(screenshot_path)
     if testing:
         test_image = str(models.resources_dir / "images" / "test_image.png")
@@ -517,14 +549,16 @@ def capture_screen_data(
                     int(word[9]),
                 )
                 if (
-                        action_id in api_resources.storage.action_collection.get_all_collections()
+                    action_id
+                    in api_resources.storage.action_collection.get_all_collections()
                 ):
                     word_action_id = action_id
                 else:
                     word_action_id = None
                 data_type = (
                     "button"
-                    if action_id in api_resources.storage.action_collection.get_all_collections()
+                    if action_id
+                    in api_resources.storage.action_collection.get_all_collections()
                     else "text"
                 )
                 """Screen objects are data that store information from 
@@ -580,7 +614,8 @@ def capture_screen_data(
         }
         return test_result_dict
     elif (
-            action_id not in api_resources.storage.action_collection.get_all_collections()
+        action_id
+        not in api_resources.storage.action_collection.get_all_collections()
     ):
         """Create new action"""
         variables = [
@@ -648,12 +683,25 @@ def screen_snip(x1: int, y1: int, x2: int, y2: int, image: models.Image) -> dict
     return response
 
 
-def screen_shot() -> dict:
-    """This function uses the current display and returns a base-64 image"""
+def screenshot_snip(x1: int, y1: int, x2: int, y2: int) -> Path:
+    img, image_path = screen_shot_image()
+    cv2.imwrite(str(image_path), img[y1:y2, x1:x2, :])
+    return image_path
+
+
+def screen_shot_image() -> (Any, Path):
     timestamp = round(time.time() * 1000)
-    screenshot_path = models.resources_dir / "screenshot" / f"screenshot_{timestamp}.png"
+    screenshot_path = (
+        models.resources_dir / "screenshot" / f"screenshot_{timestamp}.png"
+    )
     pyautogui.screenshot(screenshot_path)
     img = cv2.imread(str(screenshot_path))
+    return img, screenshot_path
+
+
+def screen_shot_response() -> dict:
+    """This function uses the current display and returns a base-64 image"""
+    img, screenshot_path = screen_shot_image()
     png_img = cv2.imencode(".png", img)
     b64_string = base64.b64encode(png_img[1]).decode("utf-8")
     screenshot_path.unlink()

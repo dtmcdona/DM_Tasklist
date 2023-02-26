@@ -77,4 +77,4 @@ class TestProcessController(ModelMixin):
         assert response == {"data": "No screen objects found"}
 
     def test_screen_shot(self):
-        assert process_controller.screen_shot() == self.black_screen_json
+        assert process_controller.screen_shot_response() == self.black_screen_json

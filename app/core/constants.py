@@ -13,6 +13,7 @@ from typing import List
 ACTIONS: List[str] = [
     "click",
     "click_image",
+    "click_image_region",
     "move_to",
     "move_to_image",
     "key_pressed",

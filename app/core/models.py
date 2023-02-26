@@ -51,6 +51,7 @@ class Action(BaseModel):
     y1: Optional[int] = None
     y2: Optional[int] = None
     images: Optional[List[str]] = []
+    haystack_image: str = None
     image_conditions: Optional[List[str]] = []
     variables: Optional[List[str]] = []
     variable_conditions: Optional[List[str]] = []
@@ -276,7 +277,7 @@ class JsonCollectionResource:
 
     def get_collection(self, obj_id: str) -> dict:
         try:
-            file_path = self.collection_dir / obj_id
+            file_path = self.collection_dir / f"{obj_id}.json"
             with open(file_path, mode="r", encoding="utf-8") as f:
                 obj = json.load(f)
             response = obj
@@ -287,15 +288,17 @@ class JsonCollectionResource:
         return response
 
     def add_collection(
-        self, obj: Union[Action, Task, Schedule]
+        self, obj: Union[Action, Task, Schedule, dict]
     ) -> Union[Action, Task, Schedule]:
         try:
+            if not isinstance(obj, self.model_cls):
+                obj = self.model_cls(**obj)
             ids = [
                 file_path.name for file_path in self.collection_dir.iterdir()
             ]
-            while obj.id in ids:
+            while f"{obj.id}.json" in ids:
                 obj.id = str(uuid.uuid4())
-            file_path = self.collection_dir / obj.id
+            file_path = self.collection_dir / f"{obj.id}.json"
             with open(file_path, mode="w", encoding="utf-8") as f:
                 json.dump(obj.dict(), f, indent=6)
             response = obj
@@ -311,9 +314,12 @@ class JsonCollectionResource:
         response = {f"Error adding {self.model_to_str()} with id: {obj.id}"}
         try:
             ids = [filename for filename in self.collection_dir.iterdir()]
-            while obj.id in ids:
-                obj.id = str(uuid.uuid4())
-            file_path = self.collection_dir / obj.id
+            if type(obj) is not Action:
+                counter = 1
+                while f"{obj.id}.json" in ids:
+                    obj.id = f"{obj.id}-{counter}"
+                    counter += 1
+            file_path = self.collection_dir / f"{obj.id}.json"
             with open(file_path, mode="w", encoding="utf-8") as f:
                 json.dump(obj.dict(), f, indent=6)
             if obj_id != obj.id:
@@ -328,14 +334,14 @@ class JsonCollectionResource:
 
     def get_all_collections(self):
         return {
-            file_path.name: json.load(open(file_path))
+            file_path.name.replace(".json", ""): json.load(open(file_path))
             for file_path in self.collection_dir.iterdir()
         }
 
     def delete_collection(self, obj_id: str) -> dict:
         response = {"data": f"Deleted {self.model_to_str()} with id: {obj_id}"}
         try:
-            file_path = self.collection_dir / obj_id
+            file_path = self.collection_dir / f"{obj_id}.json"
             file_path.unlink()
         except FileNotFoundError:
             response = {

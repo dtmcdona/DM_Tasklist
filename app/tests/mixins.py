@@ -48,6 +48,7 @@ class ModelMixin:
     )
     action_collection = None
     task_collection = None
+    schedule_collection = None
 
     @classmethod
     def setup_class(cls):
@@ -55,9 +56,11 @@ class ModelMixin:
             models.Action, True
         )
         cls.task_collection = models.JsonCollectionResource(models.Task, True)
+        cls.schedule_collection = models.JsonCollectionResource(models.Schedule, True)
         api_resources.storage = api_resources.APICollections(
             action_collection=cls.action_collection,
             task_collection=cls.task_collection,
+            schedule_collection=cls.schedule_collection,
             logging_level=DEBUG,
         )
         test_action_obj = models.Action(**cls.test_action)
@@ -133,9 +136,9 @@ class ModelMixin:
                     new_test_action = {
                         "function": action_function,
                         "images": [
-                            "test_image_copy.png",
-                            "test_image_copy.png",
+                            "test_image_copy.png"
                         ],
+                        "haystack_image": "test_image_copy.png",
                         "x1": None,
                         "y1": None,
                         "x2": None,
@@ -147,13 +150,27 @@ class ModelMixin:
                     new_test_action = {
                         "function": action_function,
                         "images": [
-                            "test_image_copy2.png",
-                            "test_image_copy2.png",
+                            "test_image_copy.png"
                         ],
+                        "haystack_image": "test_image_copy.png",
                         "x1": None,
                         "y1": None,
                         "x2": None,
                         "y2": None,
+                    }
+                    test_action_obj = models.Action(**new_test_action)
+                    cls.add_action(test_action_obj)
+                elif action_function == "click_image_region":
+                    new_test_action = {
+                        "function": action_function,
+                        "images": [
+                            "test_image_copy.png"
+                        ],
+                        "haystack_image": "test_image_copy.png",
+                        "x1": 0,
+                        "y1": 0,
+                        "x2": 200,
+                        "y2": 200,
                     }
                     test_action_obj = models.Action(**new_test_action)
                     cls.add_action(test_action_obj)
@@ -188,6 +205,7 @@ class ModelMixin:
         redis_cache.rc.flushdb()
         rmtree(cls.action_collection.collection_dir)
         rmtree(cls.task_collection.collection_dir)
+        rmtree(cls.schedule_collection.collection_dir)
         file_types = ["png", "json"]
         for image_id in cls.delete_image_files:
             for file_type in file_types:
