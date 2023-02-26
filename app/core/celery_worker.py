@@ -11,8 +11,8 @@ celery = Celery(__name__, broker="amqp://user:password@broker:5672")
 
 
 @celery.task(name="run_action")
-def run_action(action_id: str):
-    return api.execute_action(action_id)
+def run_action(action_id: str, instant_playback: bool = False):
+    return api.execute_action(action_id, instant_playback)
 
 
 @celery.task(name="cache_conditional_result")

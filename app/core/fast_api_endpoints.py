@@ -9,14 +9,15 @@ Fast API Endpoints
             2. Execute Tasks
             3. Execute Schedules
 """
+import asyncio
 import logging
+from typing import List
 
-from . import api_resources, celery_worker, models, process_controller
+from . import api_resources, asyncio_utils, celery_worker, models, process_controller
 from . import task_manager as manager
 
 from fastapi import FastAPI, Path
 from fastapi.middleware.cors import CORSMiddleware
-
 
 app = FastAPI()
 
@@ -30,20 +31,21 @@ app.add_middleware(
 )
 logging.basicConfig(level=api_resources.storage.logging_level)
 
+
 @app.get("/")
-def home():
+async def home():
     """Placeholder for home API"""
     return {"data": "Testing"}
 
 
 @app.post("/open_broswer/")
-def open_broswer(url: str):
+async def open_broswer(url: str):
     """Opens a browser on local machine in xvfb display (does not work in docker container)"""
     return process_controller.open_browser(url)
 
 
 @app.get("/get-actions/")
-def get_actions():
+async def get_actions():
     """Gets all stored actions"""
     return api_resources.storage.get_action_collection()
 
@@ -76,17 +78,21 @@ def add_execute_action(new_action: models.Action):
 
 
 @app.get("/execute-action/{action_id}")
-def execute_action(
+async def execute_action(
     action_id: str = Path(
         None,
         description="The ID of the action you would like to run.",
-    )
+    ),
+    instant_playback: bool = False
 ):
     """This function only works with Fast API running on your local machine since docker containers run headless"""
     response = {"data": f"Error with action_id:{action_id}"}
     action = api_resources.storage.get_action(action_id)
     if action:
-        response = process_controller.action_controller(action)
+        if instant_playback:
+            response = process_controller.process_action(action, instant_playback)
+        else:
+            response = process_controller.action_controller(action)
 
     logging.debug(response)
     return response
@@ -105,13 +111,13 @@ def delete_action(action_id: str):
 
 
 @app.get("/get-tasks")
-def get_tasks():
+async def get_tasks():
     """Gets all stored tasks"""
     return api_resources.storage.get_task_collection()
 
 
 @app.get("/get-task/{task_id}")
-def get_task(
+async def get_task(
     task_id: str = Path(
         1, description="The id of the task you would like to view."
     )
@@ -121,7 +127,7 @@ def get_task(
 
 
 @app.post("/add-task")
-def add_task(task: models.Task):
+async def add_task(task: models.Task):
     """Adds a new task to api_resources.storage"""
     return api_resources.storage.add_task(task)
 
@@ -133,7 +139,7 @@ def update_task(task_id: str, new_task: models.Task):
 
 
 @app.post("/task-add-action/{task_id}/{action_id}")
-def task_add_action(task_id: str, action_id: str):
+async def task_add_action(task_id: str, action_id: str):
     """Adds an action to a task"""
     response = {"data": "Schedule does not exist."}
     action = api_resources.storage.get_action(action_id)
@@ -147,9 +153,7 @@ def task_add_action(task_id: str, action_id: str):
         logging.debug(response)
         return response
     else:
-        task["action_id_list"].append(
-            action_id
-        )
+        task["action_id_list"].append(action_id)
         api_resources.storage.update_task(task_id, task)
         response = {"data": "Added action to task."}
     logging.debug(response)
@@ -170,13 +174,13 @@ def execute_task(task_id: str):
 
 
 @app.get("/get-schedules/")
-def get_schedules():
+async def get_schedules():
     """Gets all stored schedules"""
     return api_resources.storage.get_schedule_collection()
 
 
 @app.get("/get-schedule/{schedule_id}")
-def get_schedule(
+async def get_schedule(
     schedule_id: str = Path(
         1,
         description="The id of the schedule you would like to view.",
@@ -201,9 +205,7 @@ def schedule_add_task(schedule_id: str, task_id: str):
         logging.debug(response)
         return response
     else:
-        schedule["task_id_list"].append(
-            task_id
-        )
+        schedule["task_id_list"].append(task_id)
         api_resources.storage.update_schedule(schedule_id, schedule)
         response = {"data": "Added task to schedule."}
     logging.debug(response)
@@ -211,7 +213,7 @@ def schedule_add_task(schedule_id: str, task_id: str):
 
 
 @app.post("/execute-celery-action/{action_id}")
-def execute_celery_action(
+async def execute_celery_action(
     action_id: str = Path(
         None,
         description="The ID of the action you would like to run.",
@@ -224,7 +226,7 @@ def execute_celery_action(
 @app.get("/screenshot/")
 async def screen_shot():
     """This function only works with Fast API running on your local machine since docker containers run headless"""
-    return process_controller.screen_shot()
+    return process_controller.screen_shot_response()
 
 
 @app.post("/screen-snip/{x1}/{y1}/{x2}/{y2}/")
@@ -253,3 +255,15 @@ def keypress(key_name: str):
 def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
     """This function captures data within the region within (x1, y1) and (x2, y2)"""
     return process_controller.capture_screen_data(x1, y1, x2, y2, action_id)
+
+
+@app.post("/fetch-all/")
+async def fetch_all(async_req: models.AsyncRequest):
+    return await asyncio.create_task(asyncio_utils.get_requests(async_req.urls))
+
+
+@app.post("/fan-out/")
+async def fan_out(action_ids: List[str], instant_playback: bool):
+    for action_id in action_ids:
+        celery_worker.run_action.delay(action_id, instant_playback=instant_playback)
+    return {"data": "Created celery tasks"}

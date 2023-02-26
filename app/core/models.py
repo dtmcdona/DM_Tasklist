@@ -177,6 +177,13 @@ class MousePosition(BaseModel):
     screen_height: int
 
 
+class AsyncRequest(BaseModel):
+    urls: List[str] = ["https://github.com/dtmcdona/DM_Tasklist", "https://github.com/dtmcdona/DM_React"]
+    method: Optional[str] = "get"
+    request_bodies: List[dict] = None
+    headers: Optional[dict] = None
+
+
 class JsonResource:
     def __init__(self, resource_dict):
         self.obj, self.obj_dir = self.dict_to_model(resource_dict)
