@@ -40,5 +40,6 @@ RUN : \
 RUN python3.8 -m venv /venv
 ENV PATH=/venv/bin:$PATH
 RUN /bin/bash -c "source /venv/bin/activate"
+RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 COPY ./app /app

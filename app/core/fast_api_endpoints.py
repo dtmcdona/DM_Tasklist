@@ -167,7 +167,7 @@ def execute_task(task_id: str):
     if not task or task.get("action_id_list") in [None, []]:
         response = {"data": "Task not found"}
     else:
-        task_manager_obj = manager.TaskManager(task, False)
+        task_manager_obj = manager.TaskManager(models.Task(**task), False)
         response = task_manager_obj.start_playback()
     logging.debug(response)
     return response

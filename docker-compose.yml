@@ -8,11 +8,12 @@ x-services-volume:
 
 services:
   app:
+    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile
-      shm_size: "20g"
-    shm_size: "20g"
+      shm_size: "16g"
+    shm_size: "16g"
     ports:
       - 8003:8003
     restart: always
@@ -28,6 +29,7 @@ services:
       - redis
 
   broker:
+    platform: linux/amd64
     hostname: broker
     container_name: broker
     image: rabbitmq:3
@@ -38,13 +40,14 @@ services:
       - RABBITMQ_DEFAULT_PASS=password
 
   celery_worker:
+    platform: linux/amd64
     hostname: celery_worker
     container_name: celery_worker
     build:
       context: .
       dockerfile: Dockerfile
-      shm_size: "4g"
-    shm_size: "4g"
+      shm_size: "8g"
+    shm_size: "8g"
     command: celery -A core.celery_worker.celery worker --loglevel=info
     volumes:
       - *services-volume
@@ -58,6 +61,7 @@ services:
       - redis
 
   redis:
+    platform: linux/amd64
     hostname: redis
     container_name: redis
     image: redislabs/rejson:2.4.3
