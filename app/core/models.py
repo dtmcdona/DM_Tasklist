@@ -25,8 +25,10 @@ import uuid
 from pathlib import Path
 from typing import List, Optional, Any, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validators
 from pydantic.types import Json
+
+from core.constants import ACTIONS, CONDITIONALS, RESULTS
 
 base_dir = Path(".").absolute()
 resources_dir = base_dir / "resources"
@@ -42,7 +44,7 @@ class ExtendedBaseModel(BaseModel):
 
 
 class Action(BaseModel):
-    """Actions represent the smallest process of a task"""
+    """Actions represent the smallest process of a task that can be executed by the process controller"""
 
     id: Optional[str] = str(uuid.uuid4())
     function: str
@@ -69,9 +71,41 @@ class Action(BaseModel):
     random_range: Optional[int] = 0
     random_delay: Optional[float] = 0.0
 
+    def validate_function(self):
+        if self.function not in ACTIONS:
+            raise ValueError(f"Invalid function: {self.function}")
+
+    def validate_image_conditions(self):
+        if self.image_conditions:
+            for condition in self.image_conditions:
+                if condition not in CONDITIONALS:
+                    raise ValueError(f"Invalid image condition: {condition}")
+
+    def validate_variable_conditions(self):
+        if self.variable_conditions:
+            for condition in self.variable_conditions:
+                if condition not in CONDITIONALS:
+                    raise ValueError(f"Invalid variable condition: {condition}")
+
+    def validate_true_case(self):
+        if self.true_case not in RESULTS:
+            raise ValueError(f"Invalid true_case: {self.true_case}")
+
+    def validate_false_case(self):
+        if self.false_case not in RESULTS:
+            raise ValueError(f"Invalid false_case: {self.false_case}")
+
+    def validate_time_delay(self):
+        if self.time_delay < 0:
+            raise ValueError(f"Invalid time_delay: {self.time_delay}")
+
+    def validate_sleep_duration(self):
+        if self.sleep_duration < 0:
+            raise ValueError(f"Invalid sleep_duration: {self.sleep_duration}")
+
 
 class Task(BaseModel):
-    """Tasks represent a collection of actions that complete a goal"""
+    """Tasks represent a collection of actions that complete a goal or objective"""
 
     id: Optional[str] = str(uuid.uuid4())
     task_dependency_id: Optional[int] = None
@@ -93,7 +127,8 @@ class Schedule(BaseModel):
 
 
 class ScreenObject(ExtendedBaseModel):
-    """Screen objects represent text, buttons, or GUI elements"""
+    """Screen objects represent text, buttons, or GUI elements that can be
+    interacted with by the process controller"""
 
     id: Optional[str] = str(uuid.uuid4())
     type: Optional[str] = "text"
@@ -108,7 +143,8 @@ class ScreenObject(ExtendedBaseModel):
 
 class ScreenData(ExtendedBaseModel):
     """Screen data is a collection for all the screen objects found and the
-    screenshot is saved as a base 64 image"""
+    screenshot is saved as a base 64 image. This is used to compare screen
+    objects to the screen data to determine if an action should be executed"""
 
     id: Optional[str] = str(uuid.uuid4())
     timestamp: Optional[str] = datetime.datetime.now().isoformat()
@@ -118,7 +154,7 @@ class ScreenData(ExtendedBaseModel):
 
 class Image(ExtendedBaseModel):
     """Represents any picture image that needs to be stored via a 64 bit
-    encoding"""
+    encoding to be used for comparison or other purposes in the process controller"""
 
     id: Optional[str] = str(uuid.uuid4())
     width: Optional[int] = 1920
@@ -178,13 +214,23 @@ class MousePosition(BaseModel):
 
 
 class AsyncRequest(BaseModel):
-    urls: List[str] = ["https://github.com/dtmcdona/DM_Tasklist", "https://github.com/dtmcdona/DM_React"]
+    urls: List[str] = [
+        "https://github.com/dtmcdona/DM_Tasklist",
+        "https://github.com/dtmcdona/DM_React",
+    ]
     method: Optional[str] = "get"
     request_bodies: List[dict] = None
     headers: Optional[dict] = None
 
+    def validate_urls(self):
+        for url in self.urls:
+            if not validators.url(url):
+                raise ValueError(f"Invalid url: {url}")
+
 
 class JsonResource:
+    """Abstract class for storing Images, ScreenObjects, and ScreenData"""
+
     def __init__(self, resource_dict):
         self.obj, self.obj_dir = self.dict_to_model(resource_dict)
 
@@ -269,6 +315,9 @@ class JsonResource:
 
 
 class JsonCollectionResource:
+    """Abstract class for storing collections of json resources in the file
+    system"""
+
     def __init__(self, model_cls, testing=False):
         self.model_cls = model_cls
         test_dir = "test_" if testing else ""

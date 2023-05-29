@@ -60,7 +60,7 @@ def mouse_pos() -> Tuple[int, int]:
 
 
 def open_browser(url: str) -> dict:
-    """Open a browser window"""
+    """Open a browser window and return a screenshot"""
     try:
         browser_options = (
             "--disable-extensions --no-sandbox --disable-gpu "
@@ -92,7 +92,8 @@ def evaluate_conditional(
     condition: str, variable_value: str, comparison_value: Optional[str] = None
 ) -> Optional[bool]:
     """Comparison value is provided by user and the variable_value is from
-    capture_screen_data action"""
+    capture_screen_data action.  This is used to compare the two values
+    and return a boolean result."""
     if condition not in constants.CONDITIONALS:
         pass
     if condition in ("greater_than", "less_than", "equals"):
@@ -131,7 +132,8 @@ def evaluate_conditional(
 
 
 def process_action(action: models.Action, time_delay=True) -> dict:
-    """Process a given action based on its function"""
+    """Process a given action based on its function and return a response.
+    This is the main logic for each different actions with a virtual display."""
     if not isinstance(action, dict):
         action = action.dict()
     response = {"data": f'Error with action_id:{action.get("id")}'}
@@ -285,6 +287,7 @@ def process_action(action: models.Action, time_delay=True) -> dict:
 def get_conditionals_result(
     action: models.Action, screenshot_file: str = None
 ) -> bool:
+    """Evaluates conditionals for an action"""
     conditionals_result = True
     image_conditions = action.get("image_conditions")
     variable_conditions = action.get("variable_conditions")
@@ -492,7 +495,8 @@ def image_search(
 def capture_screen_data(
     x1: int, y1: int, x2: int, y2: int, action_id: str, testing: bool = False
 ) -> dict:
-    """This function captures data within the region within (x1, y1) and (x2, y2)"""
+    """This function captures data within the region within (x1, y1) and (x2, y2).
+    The data is then processed, stored and returned as a string."""
     response = {"data": "Screen data not captured"}
     screenshot_id = str(uuid.uuid4())
     screenshot_path = str(
@@ -690,6 +694,7 @@ def screenshot_snip(x1: int, y1: int, x2: int, y2: int) -> Path:
 
 
 def screen_shot_image() -> (Any, Path):
+    """This function uses the current display and returns an image"""
     timestamp = round(time.time() * 1000)
     screenshot_path = (
         models.resources_dir / "screenshot" / f"screenshot_{timestamp}.png"

@@ -56,7 +56,9 @@ class ModelMixin:
             models.Action, True
         )
         cls.task_collection = models.JsonCollectionResource(models.Task, True)
-        cls.schedule_collection = models.JsonCollectionResource(models.Schedule, True)
+        cls.schedule_collection = models.JsonCollectionResource(
+            models.Schedule, True
+        )
         api_resources.storage = api_resources.APICollections(
             action_collection=cls.action_collection,
             task_collection=cls.task_collection,
@@ -135,9 +137,7 @@ class ModelMixin:
                 elif action_function == "move_to_image":
                     new_test_action = {
                         "function": action_function,
-                        "images": [
-                            "test_image_copy.png"
-                        ],
+                        "images": ["test_image_copy.png"],
                         "haystack_image": "test_image_copy.png",
                         "x1": None,
                         "y1": None,
@@ -149,9 +149,7 @@ class ModelMixin:
                 elif action_function == "click_image":
                     new_test_action = {
                         "function": action_function,
-                        "images": [
-                            "test_image_copy.png"
-                        ],
+                        "images": ["test_image_copy.png"],
                         "haystack_image": "test_image_copy.png",
                         "x1": None,
                         "y1": None,
@@ -163,9 +161,7 @@ class ModelMixin:
                 elif action_function == "click_image_region":
                     new_test_action = {
                         "function": action_function,
-                        "images": [
-                            "test_image_copy.png"
-                        ],
+                        "images": ["test_image_copy.png"],
                         "haystack_image": "test_image_copy.png",
                         "x1": 0,
                         "y1": 0,

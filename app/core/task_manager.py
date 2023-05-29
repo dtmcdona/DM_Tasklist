@@ -87,7 +87,8 @@ class TaskManager:
         return {"data": "Task complete"}
 
     def execute_actions(self) -> None:
-        """This will loop through all actions in a linear, conditional or re-ordered task"""
+        """This will loop through all actions in a linear, conditional or re-ordered task list and
+        execute the action in the order determined by conditionals."""
         index: int = 0
         action_ids: List[str] = [action.get("id") for action in self.actions]
         celery_schedulers = (
@@ -140,13 +141,13 @@ class TaskManager:
 
     @staticmethod
     def _cancel_schedulers(schedulers) -> None:
-        """Cancels any preexisting schedulers when playback order changes"""
+        """Cancels any preexisting schedulers when playback order changes to a new action in the task list."""
         for scheduler in schedulers:
             if scheduler:
                 scheduler.cancel_schedule()
 
     def get_celery_schedulers(self, starting_index: int = 0) -> List[Any]:
-        """Creates a list of schedulers with an expected result due datetime"""
+        """Creates a list of schedulers with an expected result due datetime for each action with a condition in the task list."""
         schedulers = []
         result_wait_seconds = 0
         for i, action in enumerate(self.actions):
