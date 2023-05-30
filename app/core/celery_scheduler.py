@@ -28,7 +28,9 @@ class CeleryScheduler:
     at a later point in time. The scheduler will create jobs until the
     maximum number of jobs is reached or the result due date is reached."""
 
-    def __init__(self, task: models.Task, action: models.Action, result_due_datetime):
+    def __init__(
+        self, task: models.Task, action: models.Action, result_due_datetime
+    ):
         self.schedule_id = uuid.uuid4()
         self.starting_datetime = dt.datetime.now()
         self.action = action
@@ -49,10 +51,16 @@ class CeleryScheduler:
 
     def get_result(self, reverse: bool) -> Optional[bool]:
         """Gets the result of the action condition from shared cache."""
-        cache_keys = reversed(self.cache_key_list) if reverse else self.cache_key_list
+        cache_keys = (
+            reversed(self.cache_key_list) if reverse else self.cache_key_list
+        )
         return next(
-            (redis_cache.get_condition_result(cache_key) for cache_key in cache_keys if redis_cache.get_condition_result(cache_key)),
-            None
+            (
+                redis_cache.get_condition_result(cache_key)
+                for cache_key in cache_keys
+                if redis_cache.get_condition_result(cache_key)
+            ),
+            None,
         )
 
     def get_latest_result(self) -> Optional[bool]:
@@ -87,15 +95,23 @@ class CeleryScheduler:
     def create_job_schedule(self) -> None:
         """Creates a schedule for jobs to be executed by a celery worker."""
         self.job_schedule = [
-            self.result_due_date - dt.timedelta(seconds=job_num * self.job_creation_delta_time)
+            self.result_due_date
+            - dt.timedelta(seconds=job_num * self.job_creation_delta_time)
             for job_num in range(self.max_num_jobs)
-            if self.result_due_date - dt.timedelta(seconds=job_num * self.job_creation_delta_time) > dt.datetime.now()
+            if self.result_due_date
+            - dt.timedelta(seconds=job_num * self.job_creation_delta_time)
+            > dt.datetime.now()
         ]
-        self.cache_key_list = [f"{self.schedule_id}-{job_num}" for job_num in range(len(self.job_schedule))]
+        self.cache_key_list = [
+            f"{self.schedule_id}-{job_num}"
+            for job_num in range(len(self.job_schedule))
+        ]
 
     def execute_job_schedule(self) -> None:
         """Creates a thread that creates jobs to be executed by a celery worker."""
-        job_schedule_thread = threading.Thread(target=self.job_scheduler_thread, daemon=True)
+        job_schedule_thread = threading.Thread(
+            target=self.job_scheduler_thread, daemon=True
+        )
         job_schedule_thread.start()
 
     def execute_job_retry(self) -> None:

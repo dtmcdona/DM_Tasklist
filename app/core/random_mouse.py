@@ -18,20 +18,30 @@ def random_move(x: int, y: int) -> None:
 
         if x < current_mouse_x:
             step_distance_x = (current_mouse_x - x) // (24 - random_steps)
-            random_destination_x = random.randint(current_mouse_x - step_distance_x, current_mouse_x)
+            random_destination_x = random.randint(
+                current_mouse_x - step_distance_x, current_mouse_x
+            )
         else:
             step_distance_x = (x - current_mouse_x) // (24 - random_steps)
-            random_destination_x = random.randint(current_mouse_x, current_mouse_x + step_distance_x)
+            random_destination_x = random.randint(
+                current_mouse_x, current_mouse_x + step_distance_x
+            )
 
         if y < current_mouse_y:
             step_distance_y = (current_mouse_y - y) // (24 - random_steps)
-            random_destination_y = random.randint(current_mouse_y - step_distance_y, current_mouse_y)
+            random_destination_y = random.randint(
+                current_mouse_y - step_distance_y, current_mouse_y
+            )
         else:
             step_distance_y = (y - current_mouse_y) // (24 - random_steps)
-            random_destination_y = random.randint(current_mouse_y, current_mouse_y + step_distance_y)
+            random_destination_y = random.randint(
+                current_mouse_y, current_mouse_y + step_distance_y
+            )
 
         random_move_duration = random.randrange(0, 250, 6) / 1000
-        process_controller.mouse_move(random_destination_x, random_destination_y, random_move_duration)
+        process_controller.mouse_move(
+            random_destination_x, random_destination_y, random_move_duration
+        )
 
     random_move_duration = random.randrange(0, 500, 6) / 1000
     process_controller.mouse_move(x, y, random_move_duration)
@@ -45,8 +55,12 @@ def random_click(
     mouse_button: str = "left",
 ) -> None:
     """Click a random destination within a radius of rand_range and delay the click by delay_duration"""
-    random_x = x + random.randint(-rand_range, rand_range) if rand_range > 0 else x
-    random_y = y + random.randint(-rand_range, rand_range) if rand_range > 0 else y
+    random_x = (
+        x + random.randint(-rand_range, rand_range) if rand_range > 0 else x
+    )
+    random_y = (
+        y + random.randint(-rand_range, rand_range) if rand_range > 0 else y
+    )
 
     time.sleep(delay_duration)
 
@@ -66,4 +80,6 @@ def mouse_drift() -> None:
         random_destination_x = current_mouse_x + random.randint(-rand, rand)
         random_destination_y = current_mouse_y + random.randint(-rand, rand)
         random_move_duration = random.randrange(0, 500, 6) / 1000
-        process_controller.mouse_move(random_destination_x, random_destination_y, random_move_duration)
+        process_controller.mouse_move(
+            random_destination_x, random_destination_y, random_move_duration
+        )
