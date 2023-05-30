@@ -77,19 +77,32 @@ class APICollections:
         return response
 
     def add_task(self, task: models.Task) -> dict:
-        return self.task_collection.add_collection(task)
+        response = self.task_collection.add_collection(task)
+        redis_cache.set_json("task", response.id, response.dict())
+        return response
 
     def get_task(self, task_id: str) -> models.Task:
-        return self.task_collection.get_collection(task_id)
+        cached_value = redis_cache.get_json("task", task_id)
+        if cached_value:
+            return cached_value
+
+        response = self.task_collection.get_collection(task_id)
+        redis_cache.set_json("task", response.get("id"), response)
+        return response
 
     def get_task_collection(self) -> dict:
         return self.task_collection.get_all_collections()
 
     def update_task(self, task_id: str, task: models.Task) -> models.Task:
+        response = self.task_collection.update_collection(task_id, task)
+        redis_cache.set_json("task", response.id, response.dict())
         return self.task_collection.update_collection(task_id, task)
 
     def delete_task(self, task_id: str):
-        return self.task_collection.delete_collection(task_id)
+        response = self.task_collection.delete_collection(task_id)
+        if response.get("data") == f"Deleted Task with id: {task_id}":
+            redis_cache.del_json("task", task_id)
+        return response
 
     def get_schedule(self, schedule_id: str) -> models.Schedule:
         return self.schedule_collection.get_collection(schedule_id)

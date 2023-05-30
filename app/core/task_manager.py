@@ -32,33 +32,22 @@ class TaskManager:
             api_resources.storage.action_collection.get_collection(action_id)
             for action_id in self.task.action_id_list
         ]
-        self.config = (
-            self.load_task_config()
-            if load_config
-            else self.get_default_config()
-        )
-        self.actions_processed = {
-            str(index): 0
-            for index, action_id in enumerate(self.task.action_id_list)
-        }
+        self.config = self.load_task_config() if load_config else self.get_default_config()
+        self.actions_processed = {str(index): 0 for index, _ in enumerate(self.task.action_id_list)}
 
     def get_default_config(self) -> dict:
         """Set the config to default values for a never played task or in the case where
         celery settings changes"""
         conditionals = [
-            len(action.get("image_conditions"))
-            + len(action.get("variable_conditions"))
+            len(action.get("image_conditions", [])) + len(action.get("variable_conditions", []))
             for action in self.actions
-            if action.get("image_conditions")
-            or action.get("variable_conditions")
+            if action.get("image_conditions") or action.get("variable_conditions")
         ]
 
         return {
             "conditionals": conditionals,
             "early_result_available": [],
-            "fastest_timeline": [
-                action.get("time_delay", 0) for action in self.actions
-            ],
+            "fastest_timeline": [action.get("time_delay", 0) for action in self.actions],
             "last_conditional_results": [],
         }
 
@@ -89,13 +78,10 @@ class TaskManager:
     def execute_actions(self) -> None:
         """This will loop through all actions in a linear, conditional or re-ordered task list and
         execute the action in the order determined by conditionals."""
-        index: int = 0
-        action_ids: List[str] = [action.get("id") for action in self.actions]
-        celery_schedulers = (
-            self.get_celery_schedulers()
-            if self.config.get("conditionals")
-            else []
-        )
+        index = 0
+        action_ids = [action.get("id") for action in self.actions]
+        celery_schedulers = self.get_celery_schedulers() if self.config.get("conditionals") else []
+
         while index < len(self.actions):
             action = self.actions[index]
             index += 1
@@ -104,40 +90,26 @@ class TaskManager:
             self.actions_processed[str(index - 1)] += 1
 
             if len(celery_schedulers) > index:
-                if (
-                    self.config.get("early_result_available") not in [None, []]
-                    and self.config.get("early_result_available")[index] is True
-                ):
-                    most_recent_result = celery_schedulers[
-                        index
-                    ].get_latest_result()
+                if self.config.get("early_result_available", []) and self.config["early_result_available"][index]:
+                    most_recent_result = celery_schedulers[index].get_latest_result()
                 else:
-                    most_recent_result = celery_schedulers[
-                        index
-                    ].get_latest_result()
+                    most_recent_result = celery_schedulers[index].get_latest_result()
                     final_result = celery_schedulers[index].get_final_result()
-                    self.config["early_result_available"].append(
-                        most_recent_result == final_result
-                    )
-                    if most_recent_result != final_result:
-                        most_recent_result = final_result
+                    self.config["early_result_available"].append(most_recent_result == final_result)
+                    most_recent_result = final_result if most_recent_result != final_result else most_recent_result
 
-                self.status = process_controller.action_controller(
-                    action, prefetched_condition_result=most_recent_result
-                )
-                self.config["last_conditional_results"].append(
-                    most_recent_result
-                )
+                self.status = process_controller.action_controller(action,
+                                                                   prefetched_condition_result=most_recent_result)
+                self.config["last_conditional_results"].append(most_recent_result)
             else:
                 self.status = process_controller.action_controller(action)
+
             if self.status.get("data") == "skip_to_id":
                 skip_to_id = action.get("skip_to_id")
                 if skip_to_id in action_ids:
                     index = action_ids.index(skip_to_id)
                     self._cancel_schedulers(celery_schedulers)
-                    celery_schedulers = self.get_celery_schedulers(
-                        starting_index=index
-                    )
+                    celery_schedulers = self.get_celery_schedulers(starting_index=index)
 
     @staticmethod
     def _cancel_schedulers(schedulers) -> None:
@@ -150,23 +122,15 @@ class TaskManager:
         """Creates a list of schedulers with an expected result due datetime for each action with a condition in the task list."""
         schedulers = []
         result_wait_seconds = 0
-        for i, action in enumerate(self.actions):
-            if i < starting_index:
-                schedulers.append(None)
-                continue
-            elif len(self.config.get("conditionals")) > 0:
-                result_due_date = dt.datetime.now() + dt.timedelta(
-                    seconds=result_wait_seconds
-                )
-                new_scheduler = celery_scheduler.CeleryScheduler(
-                    self.task, action, result_due_date
-                )
+
+        for i, action in enumerate(self.actions[starting_index:], starting_index):
+            if len(self.config.get("conditionals", [])) > 0:
+                result_due_date = dt.datetime.now() + dt.timedelta(seconds=result_wait_seconds)
+                new_scheduler = celery_scheduler.CeleryScheduler(self.task, action, result_due_date)
                 schedulers.append(new_scheduler)
                 result_wait_seconds = 0
             else:
-                result_wait_seconds += (
-                    self.config.get("fastest_timeline")[i] or 0
-                )
+                result_wait_seconds += self.config.get("fastest_timeline", [])[i] or 0
                 schedulers.append(None)
 
         return schedulers

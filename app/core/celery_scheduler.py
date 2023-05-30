@@ -14,7 +14,6 @@ Celery Scheduler:
         6. Result due date
             - The date time this action condition result is due
 """
-import datetime
 import threading
 import time
 import uuid
@@ -29,9 +28,7 @@ class CeleryScheduler:
     at a later point in time. The scheduler will create jobs until the
     maximum number of jobs is reached or the result due date is reached."""
 
-    def __init__(
-        self, task: models.Task, action: models.Action, result_due_datetime
-    ):
+    def __init__(self, task: models.Task, action: models.Action, result_due_datetime):
         self.schedule_id = uuid.uuid4()
         self.starting_datetime = dt.datetime.now()
         self.action = action
@@ -50,34 +47,25 @@ class CeleryScheduler:
         """Gets the time delta between the starting time and the current time."""
         return self.starting_datetime - dt.datetime.now()
 
+    def get_result(self, reverse: bool) -> Optional[bool]:
+        """Gets the result of the action condition from shared cache."""
+        cache_keys = reversed(self.cache_key_list) if reverse else self.cache_key_list
+        return next(
+            (redis_cache.get_condition_result(cache_key) for cache_key in cache_keys if redis_cache.get_condition_result(cache_key)),
+            None
+        )
+
     def get_latest_result(self) -> Optional[bool]:
         """Gets the latest result of the action condition from shared cache."""
-        result = None
-        for cache_key in reversed(self.cache_key_list):
-            result = redis_cache.get_condition_result(cache_key)
-            if result:
-                break
-
-        return result
+        return self.get_result(reverse=True)
 
     def get_final_result(self) -> Optional[bool]:
         """Gets the final result of the action condition from shared cache."""
-        result = None
-        while result is None:
-            if len(self.cache_key_list) > 0:
-                result = redis_cache.get_condition_result(
-                    self.cache_key_list[-1]
-                )
-                time.sleep(0.01)
-            else:
-                break
+        return self.get_result(reverse=False)
 
-        return result
-
-    def create_job(self, job_num: int, job_start_time: datetime) -> None:
+    def create_job(self, job_num: int, job_start_time: dt.datetime) -> None:
         """Creates a job to be executed by a celery worker."""
         screenshot_file = process_controller.save_screenshot()
-        job_key = self.cache_key_list[job_num]
         now = dt.datetime.now()
         if now < job_start_time:
             time_diff = job_start_time - now
@@ -86,7 +74,7 @@ class CeleryScheduler:
             celery_worker.cache_conditional_result.delay(
                 action=self.action,
                 screenshot_file=screenshot_file,
-                cache_key=job_key,
+                cache_key=self.cache_key_list[job_num],
             )
 
     def job_scheduler_thread(self) -> None:
@@ -98,24 +86,16 @@ class CeleryScheduler:
 
     def create_job_schedule(self) -> None:
         """Creates a schedule for jobs to be executed by a celery worker."""
-        self.job_schedule = []
-        for job_num in range(self.max_num_jobs):
-            job_start_time = self.result_due_date - dt.timedelta(
-                seconds=job_num * self.job_creation_delta_time
-            )
-            if job_start_time > dt.datetime.now():
-                self.job_schedule.append(job_start_time)
-
-        self.cache_key_list = [
-            f"{self.schedule_id}-{job_num}"
-            for job_num in range(len(self.job_schedule))
+        self.job_schedule = [
+            self.result_due_date - dt.timedelta(seconds=job_num * self.job_creation_delta_time)
+            for job_num in range(self.max_num_jobs)
+            if self.result_due_date - dt.timedelta(seconds=job_num * self.job_creation_delta_time) > dt.datetime.now()
         ]
+        self.cache_key_list = [f"{self.schedule_id}-{job_num}" for job_num in range(len(self.job_schedule))]
 
     def execute_job_schedule(self) -> None:
         """Creates a thread that creates jobs to be executed by a celery worker."""
-        job_schedule_thread = threading.Thread(
-            target=self.job_scheduler_thread(), daemon=True
-        )
+        job_schedule_thread = threading.Thread(target=self.job_scheduler_thread, daemon=True)
         job_schedule_thread.start()
 
     def execute_job_retry(self) -> None:
@@ -123,5 +103,5 @@ class CeleryScheduler:
         job_num = len(self.job_schedule)
         job_start_time = dt.datetime.now()
         self.cache_key_list.append(f"{self.schedule_id}-{job_num}")
-        self.job_schedule.append(dt.datetime.now())
+        self.job_schedule.append(job_start_time)
         self.create_job(job_num, job_start_time)

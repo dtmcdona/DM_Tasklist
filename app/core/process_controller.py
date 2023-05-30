@@ -137,117 +137,100 @@ def process_action(action: models.Action, time_delay=True) -> dict:
     if not isinstance(action, dict):
         action = action.dict()
     response = {"data": f'Error with action_id:{action.get("id")}'}
-    if action.get("function") in ["", None]:
+    if not action.get("function"):
         return response
-    if time_delay and action.get("time_delay") not in [0.0, None]:
+    if time_delay and action.get("time_delay", 0.0) != 0.0:
         delay = float(action["time_delay"])
         time.sleep(delay)
-    x = -1
-    y = -1
-    x1 = None
-    x2 = None
-    y1 = None
-    y2 = None
-    random_range = (
-        0
-        if action.get("random_range") in [0, None]
-        else action["random_range"]
-    )
-    random_delay = (
-        0.0
-        if action.get("random_delay") in [0.0, None]
-        else float(action["random_delay"])
-    )
-    if action.get("images") not in [[], None]:
+    x, y = -1, -1
+    x1 = action.get("x1", None)
+    x2 = action.get("x2", None)
+    y1 = action.get("y1", None)
+    y2 = action.get("y2", None)
+
+    random_range = action.get("random_range", 0)
+    random_delay = float(action.get("random_delay", 0.0))
+    if action.get("images"):
         needle_file_name = action["images"][0]
         percent_similarity = 0.9
+
         if action.get("function") == "click_image_region":
-            if action.get("haystack_image") not in ["", None]:
-                # This is only used for testing
-                haystack_file_name = action["haystack_image"]
+            haystack_image = action.get("haystack_image")
+            if haystack_image:
+                haystack_file_name = haystack_image
                 delete_haystack_file = False
             else:
                 haystack_file_name = screenshot_snip(
-                    action.get("x1"),
-                    action.get("y2"),
-                    action.get("x2"),
-                    action.get("y2"),
+                    action.get("x1"), action.get("y2"), action.get("x2"), action.get("y2")
                 )
                 delete_haystack_file = True
+
             x, y = image_search(
                 needle_file_name=needle_file_name,
                 haystack_file_name=haystack_file_name,
                 percent_similarity=percent_similarity,
                 delete_haystack_file=delete_haystack_file,
             )
+
             if x != -1 and y != -1:
-                x += action.get("x1")
-                y += action.get("y1")
+                x += action.get("x1", 0)
+                y += action.get("y1", 0)
         else:
-            if action.get("haystack_image") not in ["", None]:
-                haystack_file_name = action["haystack_image"]
-            else:
-                haystack_file_name = ""
+            haystack_image = action.get("haystack_image")
+            haystack_file_name = haystack_image if haystack_image else ""
+
             x, y = image_search(
                 needle_file_name=needle_file_name,
                 haystack_file_name=haystack_file_name,
                 percent_similarity=percent_similarity,
                 delete_haystack_file=False,
             )
-    if action.get("x2") not in [-1, None] and action.get("y2") not in [
-        -1,
-        None,
-    ]:
-        if action.get("x1") in [-1, None] or action.get("y1") in [
-            -1,
-            None,
-        ]:
+    if x2 is not None and y2 is not None:
+        if x1 is None or y1 is None:
             logging.error(response)
             return response
-        x1 = action["x1"]
-        y1 = action["y1"]
-        x2 = action["x2"]
-        y2 = action["y2"]
+
         x_range = x2 - x1
         y_range = y2 - y1
+
         if random_range != 0:
-            # This fixes any errors with random mouse click range with
-            # region click
             if x_range > random_range * 2:
-                x1 = x1 + random_range
-                x2 = x2 - random_range
+                x1 += random_range
+                x2 -= random_range
             elif x_range < random_range and x_range > 4:
                 random_range = 1
-                x1 = x1 + random_range
-                x2 = x2 - random_range
+                x1 += random_range
+                x2 -= random_range
             else:
                 random_range = 0
+
             if y_range > random_range * 2:
-                y1 = y1 + random_range
-                y2 = y2 - random_range
+                y1 += random_range
+                y2 -= random_range
             elif y_range < random_range and y_range > 4:
                 random_range = 1
-                y1 = y1 + random_range
-                y2 = y2 - random_range
+                y1 += random_range
+                y2 -= random_range
             else:
                 random_range = 0
+
         x = random.randrange(x1, x2)
         y = random.randrange(y1, y2)
-    elif action.get("x1") not in [-1, None] and action.get("y1") not in [
-        -1,
-        None,
-    ]:
-        x = action["x1"]
-        y = action["y1"]
-    if action["function"] in ("click", "click_image", "click_image_region"):
+    elif x1 is not None and y1 is not None:
+        x = x1
+        y = y1
+
+    function = action.get("function")
+
+    if function in ("click", "click_image", "click_image_region"):
         if x == -1 or y == -1:
             logging.debug(response)
             return response
-        if action.get("random_path") not in [False, None]:
+
+        if action.get("random_path"):
             random_mouse.random_move(x=x, y=y)
-        if action.get("random_range") not in [0, None] or action.get(
-            "random_delay"
-        ) not in [0.0, None]:
+
+        if action.get("random_range") or action.get("random_delay"):
             random_mouse.random_click(
                 x=x,
                 y=y,
@@ -256,135 +239,99 @@ def process_action(action: models.Action, time_delay=True) -> dict:
             )
         else:
             pyautogui.click(x, y)
+
         response = {"data": f"Mouse clicked: ({x}, {y})"}
-    elif action["function"] in ("move_to", "move_to_image"):
+    elif function in ("move_to", "move_to_image"):
         if x == -1 or y == -1:
             logging.debug(response)
             return response
-        if action.get("random_path") not in [False, None]:
+
+        if action.get("random_path"):
             random_mouse.random_move(x=x, y=y)
         else:
             pyautogui.moveTo(x=x, y=y)
+
         response = {"data": f"Mouse moved to: ({x}, {y})"}
-    elif action["function"] == "key_pressed" and action.get(
-        "key_pressed"
-    ) not in [
-        "",
-        None,
-    ]:
+    elif function == "key_pressed" and action.get("key_pressed"):
         action_key = action["key_pressed"]
         keypress(action_key)
         response = {"data": f"Key pressed {action_key}"}
-    elif action["function"] == "capture_screen_data":
-        if x1 and x2 and y1 and y2:
-            action_id = action.get("id")
-            response = capture_screen_data(
-                x1=x1, y1=y1, x2=x2, y2=y2, action_id=action_id
-            )
+    elif function == "capture_screen_data" and x1 is not None and x2 is not None and y1 is not None and y2 is not None:
+        action_id = action.get("id")
+        response = capture_screen_data(x1=x1, y1=y1, x2=x2, y2=y2, action_id=action_id)
+
     return response
 
 
-def get_conditionals_result(
-    action: models.Action, screenshot_file: str = None
-) -> bool:
+def get_conditionals_result(action: models.Action, screenshot_file: str = None) -> bool:
     """Evaluates conditionals for an action"""
-    conditionals_result = True
     image_conditions = action.get("image_conditions")
     variable_conditions = action.get("variable_conditions")
+
     if image_conditions:
-        """Image conditionals are specific to png information"""
         images = action.get("images")
         haystack_image = action.get("haystack_image")
+
         for condition in image_conditions:
             needle_file_name = images[0]
-            if haystack_image not in ["", None]:
-                haystack_file_name = haystack_image
-            else:
-                haystack_file_name = screenshot_file
-            conditionals_result = conditionals_result and evaluate_conditional(
-                condition, needle_file_name, haystack_file_name
-            )
+            haystack_file_name = haystack_image or screenshot_file
+
+            if not evaluate_conditional(condition, needle_file_name, haystack_file_name):
+                return False
     elif variable_conditions:
-        """Variable conditionals are specific to OCR values compared to user input"""
         variables = action.get("variables")
         comparison_values = action.get("comparison_values")
-        for count, ele in enumerate(variable_conditions):
-            if len(comparison_values) > count + 1:
-                conditionals_result = (
-                    conditionals_result
-                    and evaluate_conditional(
-                        variable_conditions[count],
-                        variables[(count * 2) + 1],
-                    )
-                )
-            else:
-                conditionals_result = (
-                    conditionals_result
-                    and evaluate_conditional(
-                        variable_conditions[count],
-                        variables[(count * 2) + 1],
-                        comparison_values[count],
-                    )
-                )
+
+        for count, condition in enumerate(variable_conditions):
+            value_index = (count * 2) + 1
+            value = variables[value_index]
+            compare_value = comparison_values[count] if len(comparison_values) > count + 1 else None
+
+            if not evaluate_conditional(condition, value, compare_value):
+                return False
     else:
-        conditionals_result = False
-    return conditionals_result
+        return False
+
+    return True
 
 
-def action_controller(
-    action: models.Action, prefetched_condition_result: bool = None
-) -> dict:
+
+def action_controller(action: models.Action, prefetched_condition_result: bool = None) -> dict:
     """This controller manages different outcomes of the action's conditional
-    and then processes the given action"""
+        and then processes the given action"""
     if not isinstance(action, dict):
         action = action.dict()
-    response = {"data": f'Error occurred with action_id: {action.get("id")}'}
+
     if action.get("function") not in constants.ACTIONS:
         response = {"data": f'Action has invalid function: {action.get("id")}'}
         logging.debug(response)
         return response
-    num_repeats = (
-        action.get("num_repeats")
-        if action.get("num_repeats") not in [0, None]
-        else 0
-    )
-    """Repeat action until num_repeats is 0 or repeat is false"""
-    conditionals_true = True
-    check_conditional = (
-        True if action.get("function") == "capture_screen_data" else False
-    )
-    while conditionals_true:
-        if check_conditional:
-            """Capture and analyze screen information then process conditional case"""
+
+    num_repeats = action.get("num_repeats", 0)
+
+    while True:
+        if action.get("function") == "capture_screen_data":
             response = process_action(action)
-            if prefetched_condition_result:
-                conditionals_true = prefetched_condition_result
-            else:
-                conditionals_true = get_conditionals_result(action)
+            conditionals_true = prefetched_condition_result or get_conditionals_result(action)
+
             if "repeat" in action.get(f"{conditionals_true}_case".lower()):
-                if (
-                    action.get(f"{conditionals_true}_case".lower())
-                    == "sleep_and_repeat"
-                ):
+                if action.get(f"{conditionals_true}_case".lower()) == "sleep_and_repeat":
                     time.sleep(action.get("sleep_duration"))
                 num_repeats = 1
             else:
                 if action.get(f"{conditionals_true}_case".lower()) == "sleep":
                     time.sleep(action.get("sleep_duration"))
-                response = {
-                    "data": action.get(f"{conditionals_true}_case".lower())
-                }
+                response = {"data": action.get(f"{conditionals_true}_case".lower())}
                 break
         else:
-            """Action without conditional"""
             response = process_action(action)
-        """Break out of loop if no repeats"""
+
         if num_repeats <= 0:
             break
-        elif num_repeats > 0:
-            num_repeats = num_repeats - 1
-            if num_repeats <= 0:
-                break
+
+        num_repeats -= 1
+        if num_repeats <= 0:
+            break
 
     return response
 
