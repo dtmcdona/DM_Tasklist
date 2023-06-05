@@ -13,7 +13,13 @@ import asyncio
 import logging
 from typing import List
 
-from . import api_resources, asyncio_utils, celery_worker, models, process_controller
+from . import (
+    api_resources,
+    asyncio_utils,
+    celery_worker,
+    models,
+    process_controller,
+)
 from . import task_manager as manager
 
 from fastapi import FastAPI, Path
@@ -83,14 +89,16 @@ async def execute_action(
         None,
         description="The ID of the action you would like to run.",
     ),
-    instant_playback: bool = False
+    instant_playback: bool = False,
 ):
     """This function only works with Fast API running on your local machine since docker containers run headless"""
     response = {"data": f"Error with action_id:{action_id}"}
     action = api_resources.storage.get_action(action_id)
     if action:
         if instant_playback:
-            response = process_controller.process_action(action, instant_playback)
+            response = process_controller.process_action(
+                action, instant_playback
+            )
         else:
             response = process_controller.action_controller(action)
 
@@ -265,5 +273,7 @@ async def fetch_all(async_req: models.AsyncRequest):
 @app.post("/fan-out/")
 async def fan_out(action_ids: List[str], instant_playback: bool):
     for action_id in action_ids:
-        celery_worker.run_action.delay(action_id, instant_playback=instant_playback)
+        celery_worker.run_action.delay(
+            action_id, instant_playback=instant_playback
+        )
     return {"data": "Created celery tasks"}
