@@ -48,7 +48,6 @@ class ModelMixin:
     )
     action_collection = None
     task_collection = None
-    schedule_collection = None
 
     @classmethod
     def setup_class(cls):
@@ -56,13 +55,9 @@ class ModelMixin:
             models.Action, True
         )
         cls.task_collection = models.JsonCollectionResource(models.Task, True)
-        cls.schedule_collection = models.JsonCollectionResource(
-            models.Schedule, True
-        )
         api_resources.storage = api_resources.APICollections(
             action_collection=cls.action_collection,
             task_collection=cls.task_collection,
-            schedule_collection=cls.schedule_collection,
             logging_level=DEBUG,
         )
         test_action_obj = models.Action(**cls.test_action)
@@ -201,7 +196,6 @@ class ModelMixin:
         redis_cache.rc.flushdb()
         rmtree(cls.action_collection.collection_dir)
         rmtree(cls.task_collection.collection_dir)
-        rmtree(cls.schedule_collection.collection_dir)
         file_types = ["png", "json"]
         for image_id in cls.delete_image_files:
             for file_type in file_types:

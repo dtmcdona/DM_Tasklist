@@ -7,7 +7,6 @@ Fast API Endpoints
         - Interact with the process controller:
             1. Execute Actions
             2. Execute Tasks
-            3. Execute Schedules
 """
 import asyncio
 import logging
@@ -149,15 +148,15 @@ def update_task(task_id: str, new_task: models.Task):
 @app.post("/task-add-action/{task_id}/{action_id}")
 async def task_add_action(task_id: str, action_id: str):
     """Adds an action to a task"""
-    response = {"data": "Schedule does not exist."}
+    response = {"data": "Task does not exist."}
     action = api_resources.storage.get_action(action_id)
-    if action is None:
-        response = {"data": "Task does not exist."}
+    if not action:
+        response = {"data": "Action does not exist."}
         logging.debug(response)
         return response
     task = api_resources.storage.get_task(task_id)
-    if task is None:
-        response = {"data": "Schedule does not exist."}
+    if not task:
+        response = {"data": "Task does not exist."}
         logging.debug(response)
         return response
     else:
@@ -177,45 +176,6 @@ def execute_task(task_id: str):
     else:
         task_manager_obj = manager.TaskManager(models.Task(**task), False)
         response = task_manager_obj.start_playback()
-    logging.debug(response)
-    return response
-
-
-@app.get("/get-schedules/")
-async def get_schedules():
-    """Gets all stored schedules"""
-    return api_resources.storage.get_schedule_collection()
-
-
-@app.get("/get-schedule/{schedule_id}")
-async def get_schedule(
-    schedule_id: str = Path(
-        1,
-        description="The id of the schedule you would like to view.",
-    )
-):
-    """Returns a schedule by id"""
-    return api_resources.storage.get_schedule(schedule_id)
-
-
-@app.post("/schedule-add-task/{schedule_id}/{task_id}")
-def schedule_add_task(schedule_id: str, task_id: str):
-    """Adds a task to a schedule"""
-    response = {"data": "Schedule does not exist."}
-    task = api_resources.storage.get_task(task_id)
-    if task is None:
-        response = {"data": "Task does not exist."}
-        logging.debug(response)
-        return response
-    schedule = api_resources.storage.get_schedule(schedule_id)
-    if schedule is None:
-        response = {"data": "Schedule does not exist."}
-        logging.debug(response)
-        return response
-    else:
-        schedule["task_id_list"].append(task_id)
-        api_resources.storage.update_schedule(schedule_id, schedule)
-        response = {"data": "Added task to schedule."}
     logging.debug(response)
     return response
 

@@ -3,16 +3,15 @@ from pathlib import Path
 from shutil import rmtree
 import uuid
 
-from core.models import Action, Task, Schedule, JsonCollectionResource
+from core.models import Action, Task, JsonCollectionResource
 
 
 class TestModels:
-    """Used to test actions, tasks, and schedule lists"""
+    """Used to test actions and tasks lists"""
 
     action_id1 = f"{uuid.uuid4()}1"
     action_id2 = f"{uuid.uuid4()}2"
     task_id = str(uuid.uuid4())
-    schedule_id = str(uuid.uuid4())
     test_action1 = {
         "id": action_id1,
         "function": "move_to",
@@ -29,22 +28,16 @@ class TestModels:
         "id": task_id,
         "action_id_list": [action_id1, action_id2],
     }
-    test_shedule = {
-        "id": schedule_id,
-        "task_id_list": [task_id],
-    }
 
     @classmethod
     def setup_class(cls):
         cls.action_collection = JsonCollectionResource(Action, True)
         cls.task_collection = JsonCollectionResource(Task, True)
-        cls.schedule_collection = JsonCollectionResource(Schedule, True)
 
     @classmethod
     def teardown_method(cls):
         rmtree(cls.action_collection.collection_dir)
         rmtree(cls.task_collection.collection_dir)
-        rmtree(cls.schedule_collection.collection_dir)
 
     def test_json_collection_resource(self):
         test_action_obj1 = Action(**self.test_action1)
@@ -54,8 +47,6 @@ class TestModels:
         logging.debug(self.action_collection)
         test_task_obj = Task(**self.test_task)
         self.task_collection.add_collection(test_task_obj)
-        test_schedule_obj = Schedule(**self.test_shedule)
-        self.schedule_collection.add_collection(test_schedule_obj)
         assert set(
             self.action_collection.get_collection(self.action_id1)
         ) >= set(self.test_action1)
@@ -65,6 +56,3 @@ class TestModels:
         assert set(self.task_collection.get_collection(self.task_id)) >= set(
             self.test_task
         )
-        assert set(
-            self.schedule_collection.get_collection(self.schedule_id)
-        ) >= set(self.test_shedule)

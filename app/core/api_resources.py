@@ -5,9 +5,7 @@ API Resources
             deleted through the API endpoints
         2. Task collection - All tasks  created, read, updated and
             deleted through the API endpoints
-        3. Schedule collection - All schedules created, read, updated and
-            deleted through the API endpoints
-        4. Logging level - Logging level for the API
+        3. Logging level - Logging level for the API
 """
 import logging
 
@@ -19,7 +17,6 @@ class APICollections:
         self,
         action_collection: models.Action = None,
         task_collection: models.Task = None,
-        schedule_collection: models.Schedule = None,
         logging_level=None,
     ):
         if logging_level == logging.DEBUG:
@@ -31,18 +28,11 @@ class APICollections:
                 task_collection
                 or models.JsonCollectionResource(models.Task, testing=True)
             )
-            self.schedule_collection = (
-                schedule_collection
-                or models.JsonCollectionResource(models.Schedule, testing=True)
-            )
         else:
             self.action_collection = models.JsonCollectionResource(
                 models.Action
             )
             self.task_collection = models.JsonCollectionResource(models.Task)
-            self.schedule_collection = models.JsonCollectionResource(
-                models.Schedule
-            )
 
         self.logging_level = logging.WARNING
 
@@ -103,18 +93,6 @@ class APICollections:
         if response.get("data") == f"Deleted Task with id: {task_id}":
             redis_cache.del_json("task", task_id)
         return response
-
-    def get_schedule(self, schedule_id: str) -> models.Schedule:
-        return self.schedule_collection.get_collection(schedule_id)
-
-    def get_schedule_collection(self) -> dict:
-        return self.schedule_collection.get_all_collections()
-
-    def update_schedule(self, schedule_id, schedule) -> models.Schedule:
-        return self.schedule_collection.update_collection(schedule_id, schedule)
-
-    def delete_schedule(self, schedule_id):
-        return self.schedule_collection.delete_collection(schedule_id)
 
 
 storage = APICollections()

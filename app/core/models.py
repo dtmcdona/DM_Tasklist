@@ -3,7 +3,6 @@ Models:
     Pydantic models
         - Actions - All actions that can be executed by the process controller
         - Tasks - An ordered collection of actions to execute with a configuration
-        - Schedules - An ordered collection of tasks to execute
         - Screen Objects - Screen objects represent text, buttons, or GUI elements
         - Image - An image from the xvfb virtual display
         - Json Data - Abstract object for storing JSON data
@@ -118,14 +117,6 @@ class Task(BaseModel):
     last_conditional_results: Optional[List[Json]] = []
 
 
-class Schedule(BaseModel):
-    """Schedule is a series of tasks to run over a given timeframe"""
-
-    id: Optional[str] = str(uuid.uuid4())
-    schedule_dependency_id: Optional[str] = None
-    task_id_list: List[str] = []
-
-
 class ScreenObject(ExtendedBaseModel):
     """Screen objects represent text, buttons, or GUI elements that can be
     interacted with by the process controller"""
@@ -166,51 +157,6 @@ class Image(ExtendedBaseModel):
     x2: Optional[int] = 1920
     y2: Optional[int] = 1920
     base64str: str
-
-
-class JsonData(BaseModel):
-    """Abstract data type for storing unique data"""
-
-    id: str
-    data: Json
-
-
-class Source(BaseModel):
-    """Represents an abstract data source stored in the file system"""
-
-    id: str
-    uri: str
-
-
-class CapturedData(BaseModel):
-    """Represents any form of data that can be captured as relevant data
-    for an action or task"""
-
-    id: str
-    type: str
-    source_id: str
-    json_data_id: str
-    schedule_id: str
-
-
-class TaskRank(BaseModel):
-    """Used to determine how efficient it completes a goal"""
-
-    task_rank: int
-    task_id: str
-    delta_vars: List[float]
-    duration: datetime.time
-
-
-class MousePosition(BaseModel):
-    """Might be used in the future to track relative mouse x and y coords for
-    different resolutions"""
-
-    action_id: str
-    x: int
-    y: int
-    screen_width: int
-    screen_height: int
 
 
 class AsyncRequest(BaseModel):
@@ -327,9 +273,7 @@ class JsonCollectionResource:
         self.collection_dir.mkdir(exist_ok=True)
 
     def model_to_str(self) -> str:
-        return {Action: "action", Task: "task", Schedule: "schedule"}.get(
-            self.model_cls
-        )
+        return {Action: "action", Task: "task"}.get(self.model_cls)
 
     def get_collection(self, obj_id: str) -> dict:
         try:
@@ -344,8 +288,8 @@ class JsonCollectionResource:
         return response
 
     def add_collection(
-        self, obj: Union[Action, Task, Schedule, dict]
-    ) -> Union[Action, Task, Schedule]:
+        self, obj: Union[Action, Task, dict]
+    ) -> Union[Action, Task]:
         try:
             if not isinstance(obj, self.model_cls):
                 obj = self.model_cls(**obj)
@@ -365,8 +309,8 @@ class JsonCollectionResource:
         return response
 
     def update_collection(
-        self, obj_id: str, obj: Union[Action, Task, Schedule]
-    ) -> Union[Action, Task, Schedule]:
+        self, obj_id: str, obj: Union[Action, Task]
+    ) -> Union[Action, Task]:
         response = {f"Error adding {self.model_to_str()} with id: {obj.id}"}
         try:
             ids = [filename for filename in self.collection_dir.iterdir()]
