@@ -99,14 +99,14 @@ class TaskManager:
 
         while index < len(self.actions):
             action = self.actions[index]
-            index += 1
             if not action:
+                index += 1
                 continue
-            self.actions_processed[str(index - 1)] += 1
+            self.actions_processed[str(index)] += 1
 
             if len(celery_schedulers) > index:
                 if (
-                    self.config.get("early_result_available", [])
+                    len(self.config.get("early_result_available")) > index
                     and self.config["early_result_available"][index]
                 ):
                     most_recent_result = celery_schedulers[
@@ -135,6 +135,7 @@ class TaskManager:
             else:
                 self.status = process_controller.action_controller(action)
 
+            index += 1
             if self.status.get("data") == "skip_to_id":
                 skip_to_id = action.get("skip_to_id")
                 if skip_to_id in action_ids:
@@ -168,6 +169,8 @@ class TaskManager:
                 new_scheduler = celery_scheduler.CeleryScheduler(
                     self.task, action, result_due_date
                 )
+                new_scheduler.create_job_schedule()
+                new_scheduler.execute_job_schedule()
                 schedulers.append(new_scheduler)
                 result_wait_seconds = 0
             else:

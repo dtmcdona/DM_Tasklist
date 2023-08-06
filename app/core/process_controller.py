@@ -8,6 +8,7 @@ Process Controller
     can also be used in conjunction with a Task Manager to perform an
     ordered or re-ordered list of actions in a task.
 """
+import asyncio
 import base64
 import datetime
 import json
@@ -26,7 +27,7 @@ import numpy as np
 import pytesseract
 
 from . import fast_api_endpoints as api
-from . import api_resources, models, random_mouse, constants
+from . import api_resources, async_process_controller, models, random_mouse, constants
 
 """Virtual display setup has to be setup before pyautogui is imported"""
 import Xlib.display
@@ -326,12 +327,20 @@ def get_conditionals_result(
         haystack_image = action.get("haystack_image")
 
         for condition in image_conditions:
-            needle_file_name = images[0]
-            haystack_file_name = haystack_image or screenshot_file
+            if condition == "if_image_present" and len(images) > 1:
+                result = asyncio.run(
+                    async_process_controller.get_image_present_result(
+                        action, haystack_image or screenshot_file
+                    )
+                )
+            else:
+                needle_file_name = images[0]
+                haystack_file_name = haystack_image or screenshot_file
+                result = evaluate_conditional(
+                    condition, needle_file_name, haystack_file_name
+                )
 
-            if not evaluate_conditional(
-                condition, needle_file_name, haystack_file_name
-            ):
+            if not result:
                 return False
     elif variable_conditions:
         variables = action.get("variables")

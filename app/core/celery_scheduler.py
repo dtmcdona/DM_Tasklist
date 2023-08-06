@@ -54,14 +54,9 @@ class CeleryScheduler:
         cache_keys = (
             reversed(self.cache_key_list) if reverse else self.cache_key_list
         )
-        return next(
-            (
-                redis_cache.get_condition_result(cache_key)
-                for cache_key in cache_keys
-                if redis_cache.get_condition_result(cache_key)
-            ),
-            None,
-        )
+        for cache_key in cache_keys:
+            if redis_cache.get_condition_result(cache_key):
+                return redis_cache.get_condition_result(cache_key)
 
     def get_latest_result(self) -> Optional[bool]:
         """Gets the latest result of the action condition from shared cache."""

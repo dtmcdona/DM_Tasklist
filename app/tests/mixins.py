@@ -13,7 +13,15 @@ from core import api_resources, fast_api_endpoints, constants, models
 from core import redis_cache
 
 
+KEEP_IMAGES = ("test_image.json", "test_image.png", "test_image_present_1.png")
+
+
 class ModelMixin:
+    KEEP_IMAGES = (
+        "test_image.json",
+        "test_image.png",
+        "test_image_present_1.png",
+    )
     test_action = {
         "id": "test_capture_screen_data",
         "function": "capture_screen_data",
@@ -228,7 +236,7 @@ class ModelMixin:
     def clear_images():
         image_dir = os.path.join(models.resources_dir, "images")
         for file_name in os.listdir(image_dir):
-            if file_name not in ("test_image.json", "test_image.png"):
+            if file_name not in KEEP_IMAGES:
                 file_path = os.path.join(image_dir, file_name)
                 os.remove(file_path)
 
