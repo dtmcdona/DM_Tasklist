@@ -215,8 +215,8 @@ def mouse_click(x: int, y: int):
 
 
 @app.get("/keypress/{key_id}")
-def keypress(key_name: str):
-    return process_controller.keypress(key_name)
+def keypress(key_id: str):
+    return process_controller.keypress(key_id)
 
 
 @app.get("/capture-screen-data/{x1}/{y1}/{x2}/{y2}/{action_id}")
