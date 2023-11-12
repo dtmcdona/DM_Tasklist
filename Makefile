@@ -23,7 +23,7 @@ tests:
 	sudo docker compose run app pytest -vv
 
 clear_imgs:
-	python3 clear_img_data.py
+	python3 app/scripts/clear_img_data.py
 
 clear_src:
-	sudo python3 reset_collections.py
+	sudo python3 app/scripts/reset_collections.py
