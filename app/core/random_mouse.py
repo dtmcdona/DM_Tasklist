@@ -47,6 +47,13 @@ def random_move(x: int, y: int) -> None:
     process_controller.mouse_move(x, y, random_move_duration)
 
 
+def random_drag(x1: int, y1: int, x2: int, y2: int) -> None:
+    random_move(x1, y1)
+    process_controller.mouse_down()
+    random_move(x2, y2)
+    process_controller.mouse_up()
+
+
 def random_click(
     x: int,
     y: int,

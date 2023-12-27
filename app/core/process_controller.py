@@ -39,6 +39,7 @@ import pyautogui
 
 """Virtual display"""
 pyautogui._pyautogui_x11._display = Xlib.display.Display(os.environ["DISPLAY"])
+pyautogui.FAILSAFE = False
 
 image_dir = models.resources_dir / "images"
 screen_width, screen_height = pyautogui.size()
@@ -108,8 +109,8 @@ class MouseAction(ActionStrategy):
                 else:
                     random_range = 0
 
-            self.x = random.randrange(self.x1, self.x2)
-            self.y = random.randrange(self.y1, self.y2)
+                self.x = random.randrange(self.x1, self.x2)
+                self.y = random.randrange(self.y1, self.y2)
         elif self.x1 is not None and self.y1 is not None:
             self.x = self.x1
             self.y = self.y1
@@ -148,6 +149,13 @@ class MouseAction(ActionStrategy):
                 pyautogui.moveTo(x=self.x, y=self.y)
 
             self.response = {"data": f"Mouse moved to: ({self.x}, {self.y})"}
+        elif function == "drag_to":
+            if self.action.get("random_path"):
+                random_mouse.random_drag(x1=self.x1, y1=self.y1, x2=self.x2, y2=self.y2)
+            else:
+                mouse_drag(x1=self.x1, y1=self.y1, x2=self.x2, y2=self.y2)
+
+            self.response = {"data": f"Mouse dragged from: ({self.x1}, {self.y1}) to ({self.x2}, {self.y2})"}
 
 
 class ImageAction(MouseAction):
@@ -217,6 +225,12 @@ def mouse_down(mouse_button: str = "left"):
     """Mouse button down"""
     pyautogui.mouseDown(button=mouse_button)
 
+def mouse_drag(x1, y1, x2, y2):
+    """Drag mouse from (x1, y1) to (x2, y2)"""
+    pyautogui.moveTo(x=x1, y=y1)
+    mouse_down()
+    pyautogui.moveTo(x=x2, y=y2)
+    mouse_up()
 
 def mouse_pos() -> Tuple[int, int]:
     """Mouse (x, y) position"""
@@ -308,6 +322,7 @@ def process_action(action: models.Action, time_delay=True) -> dict:
         "click_image_region": ImageAction,
         "move_to": MouseAction,
         "move_to_image": ImageAction,
+        "drag_to": MouseAction,
         "key_pressed": KeyAction,
         "capture_screen_data": CaptureDataAction,
     }.get(function)(action)

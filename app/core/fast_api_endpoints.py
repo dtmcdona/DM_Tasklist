@@ -43,8 +43,8 @@ async def home():
     return {"data": "Testing"}
 
 
-@app.post("/open_broswer/")
-async def open_broswer(url: str):
+@app.post("/open_browser/")
+async def open_browser(url: str):
     """Opens a browser on local machine in xvfb display (does not work in docker container)"""
     return process_controller.open_browser(url)
 
@@ -212,6 +212,12 @@ def move_mouse(x: int, y: int):
 def mouse_click(x: int, y: int):
     """Moves and clicks the mouse at point (x, y)"""
     return process_controller.mouse_click(x, y)
+
+
+@app.get("/mouse-drag/{x1}/{y1}/{x2}/{y2}")
+def mouse_drag(x1: int, y1: int, x2: int, y2: int):
+    """Drags the mouse from point (x1, y1) to (x2, y2)"""
+    return process_controller.mouse_drag(x1, y1, x2, y2)
 
 
 @app.get("/keypress/{key_id}")
