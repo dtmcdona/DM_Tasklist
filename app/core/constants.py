@@ -16,6 +16,7 @@ ACTIONS: List[str] = [
     "click_image_region",
     "move_to",
     "move_to_image",
+    "drag_to",
     "key_pressed",
     "capture_screen_data",
 ]
