@@ -41,8 +41,14 @@ class TestProcessController(ModelMixin):
             response = process_controller.action_controller(action)
             if "move" in action.get("function"):
                 assert "Mouse moved to:" in response["data"]
+            elif "drag" in action.get("function"):
+                assert "Mouse dragged from:" in response["data"]
+            elif "click_right" in action.get("function"):
+                assert "Mouse right clicked:" in response["data"]
             elif "click" in action.get("function"):
-                assert "Mouse clicked:" in response["data"]
+                assert "Mouse left clicked:" in response["data"]
+            elif "capture_screen_data" in action.get("function"):
+                assert "Screen data captured" in response["data"]
             elif action.get("function") == "key_pressed":
                 assert response == {"data": f"Key pressed {action.key_pressed}"}
 

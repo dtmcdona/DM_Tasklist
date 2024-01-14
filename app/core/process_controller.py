@@ -27,7 +27,13 @@ import numpy as np
 import pytesseract
 
 from . import fast_api_endpoints as api
-from . import api_resources, async_process_controller, models, random_mouse, constants
+from . import (
+    api_resources,
+    async_process_controller,
+    models,
+    random_mouse,
+    constants,
+)
 
 """Virtual display setup has to be setup before pyautogui is imported"""
 import Xlib.display
@@ -109,19 +115,25 @@ class MouseAction(ActionStrategy):
                 else:
                     random_range = 0
 
-                self.x = random.randrange(self.x1, self.x2)
-                self.y = random.randrange(self.y1, self.y2)
+            self.x = random.randrange(self.x1, self.x2)
+            self.y = random.randrange(self.y1, self.y2)
         elif self.x1 is not None and self.y1 is not None:
             self.x = self.x1
             self.y = self.y1
 
         function = self.action.get("function")
 
-        if function in ("click", "click_image", "click_image_region"):
+        if function in (
+            "click",
+            "click_right",
+            "click_image",
+            "click_image_region",
+        ):
             if self.x == -1 or self.y == -1:
                 logging.debug(self.response)
                 return
 
+            mouse_button = "right" if function == "click_right" else "left"
             if self.action.get("random_path"):
                 random_mouse.random_move(x=self.x, y=self.y)
 
@@ -133,11 +145,14 @@ class MouseAction(ActionStrategy):
                     y=self.y,
                     rand_range=random_range,
                     delay_duration=random_delay,
+                    mouse_button=mouse_button,
                 )
             else:
-                pyautogui.click(self.x, self.y)
+                mouse_click(self.x, self.y, mouse_button=mouse_button)
 
-            self.response = {"data": f"Mouse clicked: ({self.x}, {self.y})"}
+            self.response = {
+                "data": f"Mouse {mouse_button} clicked: ({self.x}, {self.y})"
+            }
         elif function in ("move_to", "move_to_image"):
             if self.x == -1 or self.y == -1:
                 logging.debug(self.response)
@@ -146,16 +161,20 @@ class MouseAction(ActionStrategy):
             if self.action.get("random_path"):
                 random_mouse.random_move(x=self.x, y=self.y)
             else:
-                pyautogui.moveTo(x=self.x, y=self.y)
+                mouse_move(x=self.x, y=self.y)
 
             self.response = {"data": f"Mouse moved to: ({self.x}, {self.y})"}
         elif function == "drag_to":
             if self.action.get("random_path"):
-                random_mouse.random_drag(x1=self.x1, y1=self.y1, x2=self.x2, y2=self.y2)
+                random_mouse.random_drag(
+                    x1=self.x1, y1=self.y1, x2=self.x2, y2=self.y2
+                )
             else:
                 mouse_drag(x1=self.x1, y1=self.y1, x2=self.x2, y2=self.y2)
 
-            self.response = {"data": f"Mouse dragged from: ({self.x1}, {self.y1}) to ({self.x2}, {self.y2})"}
+            self.response = {
+                "data": f"Mouse dragged from: ({self.x1}, {self.y1}) to ({self.x2}, {self.y2})"
+            }
 
 
 class ImageAction(MouseAction):
@@ -214,27 +233,6 @@ class CaptureDataAction(MouseAction):
                 y2=self.y2,
                 action_id=action_id,
             )
-
-
-def mouse_up(mouse_button: str = "left"):
-    """Mouse button up"""
-    pyautogui.mouseUp(button=mouse_button)
-
-
-def mouse_down(mouse_button: str = "left"):
-    """Mouse button down"""
-    pyautogui.mouseDown(button=mouse_button)
-
-def mouse_drag(x1, y1, x2, y2):
-    """Drag mouse from (x1, y1) to (x2, y2)"""
-    pyautogui.moveTo(x=x1, y=y1)
-    mouse_down()
-    pyautogui.moveTo(x=x2, y=y2)
-    mouse_up()
-
-def mouse_pos() -> Tuple[int, int]:
-    """Mouse (x, y) position"""
-    return pyautogui.position()
 
 
 def open_browser(url: str) -> dict:
@@ -318,6 +316,7 @@ def process_action(action: models.Action, time_delay=True) -> dict:
     function = action.get("function")
     action_handler = {
         "click": MouseAction,
+        "click_right": MouseAction,
         "click_image": ImageAction,
         "click_image_region": ImageAction,
         "move_to": MouseAction,
@@ -455,13 +454,13 @@ def keypress(key_input: str, duration: float = 0.05) -> dict:
     return response
 
 
-def mouse_click(x: int, y: int) -> dict:
+def mouse_click(x: int, y: int, mouse_button: str) -> dict:
     """Moves and clicks the mouse at point (x, y)"""
     screen_width, screen_height = pyautogui.size()
     response = {"data": "Invalid input"}
-    if x <= screen_width and x >= 0 and y <= screen_height and y >= 0:
-        pyautogui.click(x, y)
-        response = {"data": f"Moved mouse to ({x},{y})"}
+    if (0 <= x <= screen_width) and (0 <= y <= screen_height):
+        pyautogui.click(x, y, button=mouse_button)
+        response = {"data": f"Mouse {mouse_button} clicked ({x},{y})"}
     logging.debug(response)
     return response
 
@@ -475,6 +474,29 @@ def mouse_move(x: int, y: int, duration: float = 0.0) -> dict:
         response = {"data": f"Moved mouse to ({x},{y})"}
     logging.debug(response)
     return response
+
+
+def mouse_up(mouse_button: str = "left"):
+    """Mouse button up"""
+    pyautogui.mouseUp(button=mouse_button)
+
+
+def mouse_down(mouse_button: str = "left"):
+    """Mouse button down"""
+    pyautogui.mouseDown(button=mouse_button)
+
+
+def mouse_drag(x1, y1, x2, y2):
+    """Drag mouse from (x1, y1) to (x2, y2)"""
+    pyautogui.moveTo(x=x1, y=y1)
+    mouse_down()
+    pyautogui.moveTo(x=x2, y=y2)
+    mouse_up()
+
+
+def mouse_pos() -> Tuple[int, int]:
+    """Mouse (x, y) position"""
+    return pyautogui.position()
 
 
 def image_search(

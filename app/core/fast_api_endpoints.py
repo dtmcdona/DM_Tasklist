@@ -67,13 +67,13 @@ async def get_action(
 
 
 @app.post("/add-action")
-def add_action(new_action: models.Action):
+async def add_action(new_action: models.Action):
     """Adds a new action to api_resources.storage"""
     return api_resources.storage.add_action(new_action)
 
 
 @app.post("/add-execute-action")
-def add_execute_action(new_action: models.Action):
+async def add_execute_action(new_action: models.Action):
     """Adds a new action to api_resources.storage"""
     response = api_resources.storage.add_action(new_action)
     if isinstance(response, models.Action):
@@ -106,13 +106,13 @@ async def execute_action(
 
 
 @app.post("/update-action/{action_id}")
-def update_action(action_id: str, new_action: models.Action):
+async def update_action(action_id: str, new_action: models.Action):
     """Updates a previous action with new information"""
     return api_resources.storage.update_action(action_id, new_action)
 
 
 @app.get("/delete-action/{action_id}")
-def delete_action(action_id: str):
+async def delete_action(action_id: str):
     """Deletes an action by id"""
     return api_resources.storage.delete_action(action_id)
 
@@ -140,7 +140,7 @@ async def add_task(task: models.Task):
 
 
 @app.post("/update-task/{task_id}")
-def update_task(task_id: str, new_task: models.Task):
+async def update_task(task_id: str, new_task: models.Task):
     """Updates a previous task with new information"""
     return api_resources.storage.update_task(task_id, new_task)
 
@@ -198,35 +198,36 @@ async def screen_shot():
 
 
 @app.post("/screen-snip/{x1}/{y1}/{x2}/{y2}/")
-def screen_snip(x1: int, y1: int, x2: int, y2: int, image: models.Image):
+async def screen_snip(x1: int, y1: int, x2: int, y2: int, image: models.Image):
     """This function is used to capture a section of the screen and store in resources/images as png and json files"""
     return process_controller.screen_snip(x1, y1, x2, y2, image)
 
 
 @app.get("/move-mouse/{x}/{y}")
-def move_mouse(x: int, y: int):
+async def move_mouse(x: int, y: int):
     return process_controller.move_mouse(x, y)
 
 
-@app.get("/mouse-click/{x}/{y}")
-def mouse_click(x: int, y: int):
+@app.get("/mouse-click/{x}/{y}/{mouse_button}")
+async def mouse_click(x: int, y: int, mouse_button: str = "left"):
     """Moves and clicks the mouse at point (x, y)"""
-    return process_controller.mouse_click(x, y)
+    return process_controller.mouse_click(x, y, mouse_button=mouse_button)
 
 
 @app.get("/mouse-drag/{x1}/{y1}/{x2}/{y2}")
-def mouse_drag(x1: int, y1: int, x2: int, y2: int):
+async def mouse_drag(x1: int, y1: int, x2: int, y2: int):
     """Drags the mouse from point (x1, y1) to (x2, y2)"""
     return process_controller.mouse_drag(x1, y1, x2, y2)
 
 
 @app.get("/keypress/{key_id}")
-def keypress(key_id: str):
+async def keypress(key_id: str):
+    """Press keyboard key"""
     return process_controller.keypress(key_id)
 
 
 @app.get("/capture-screen-data/{x1}/{y1}/{x2}/{y2}/{action_id}")
-def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
+async def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
     """This function captures data within the region within (x1, y1) and (x2, y2)"""
     return process_controller.capture_screen_data(x1, y1, x2, y2, action_id)
 
