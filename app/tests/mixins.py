@@ -122,10 +122,27 @@ class ModelMixin:
         key_presses = [None, "0"]
         for action_function in constants.ACTIONS:
             if action_function != "capture_screen_data":
-                if (
-                    action_function != "key_pressed"
-                    and "image" not in action_function
-                ):
+                if action_function == "click_right":
+                    new_test_action = {
+                        "function": action_function,
+                        "x1": 50,
+                        "y1": 50,
+                        "x2": None,
+                        "y2": None,
+                    }
+                    test_action_obj = models.Action(**new_test_action)
+                    cls.add_action(test_action_obj)
+                elif action_function == "drag_to":
+                    new_test_action = {
+                        "function": action_function,
+                        "x1": 25,
+                        "y1": 25,
+                        "x2": 50,
+                        "y2": 50,
+                    }
+                    test_action_obj = models.Action(**new_test_action)
+                    cls.add_action(test_action_obj)
+                elif action_function in ("move_to", "click"):
                     for position, rand_range in rand_mouse_positions:
                         new_test_action = {
                             "function": action_function,
@@ -137,6 +154,16 @@ class ModelMixin:
                         }
                         test_action_obj = models.Action(**new_test_action)
                         cls.add_action(test_action_obj)
+                elif action_function == "capture_screen_data":
+                    new_test_action = {
+                        "function": action_function,
+                        "x1": 18,
+                        "y1": 18,
+                        "x2": 36,
+                        "y2": 36,
+                    }
+                    test_action_obj = models.Action(**new_test_action)
+                    cls.add_action(test_action_obj)
                 elif action_function == "move_to_image":
                     new_test_action = {
                         "function": action_function,

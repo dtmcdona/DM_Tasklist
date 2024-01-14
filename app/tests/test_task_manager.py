@@ -59,7 +59,7 @@ class TestTaskManager(ModelMixin):
         assert task_manager_obj.config == {
             "conditionals": [],
             "early_result_available": [],
-            "fastest_timeline": [0.0 for _ in range(10)],
+            "fastest_timeline": [0.0 for _ in range(len(action_ids))],
             "last_conditional_results": [],
         }
 

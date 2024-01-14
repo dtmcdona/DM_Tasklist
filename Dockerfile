@@ -1,4 +1,4 @@
-FROM ubuntu:bionic
+FROM ubuntu:bionic-20230530
 
 RUN apt-get update && apt-get install python3.8 tesseract-ocr python3-pip curl unzip -yf
 # Install Chrome

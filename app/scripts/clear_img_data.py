@@ -8,12 +8,12 @@ def clear_img_data():
         data_dir = resources_dir / data
         for file_path in data_dir.iterdir():
             if file_path.name not in (
-                    "test_image.json",
-                    "test_image.png",
-                    "black_screen.json",
-                    "test_screen_data.json",
-                    "test_screen_data_object.json",
-                    "test_image_present_1.png"
+                "test_image.json",
+                "test_image.png",
+                "black_screen.json",
+                "test_screen_data.json",
+                "test_screen_data_object.json",
+                "test_image_present_1.png",
             ):
                 file_path.unlink()
 
