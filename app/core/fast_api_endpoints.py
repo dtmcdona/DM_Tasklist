@@ -227,8 +227,10 @@ async def keypress(key_id: str):
 
 
 @app.get("/capture-screen-data/{x1}/{y1}/{x2}/{y2}/{action_id}")
-async def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: int):
+def capture_screen_data(x1: int, y1: int, x2: int, y2: int, action_id: str):
     """This function captures data within the region within (x1, y1) and (x2, y2)"""
+    if action_id == "-1":
+        action_id = None
     return process_controller.capture_screen_data(x1, y1, x2, y2, action_id)
 
 
