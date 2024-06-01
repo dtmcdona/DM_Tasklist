@@ -86,7 +86,9 @@ class MouseAction(ActionStrategy):
         super().execute_action(time_delay)
         random_range = self.action.get("random_range", 0)
         random_delay = float(self.action.get("random_delay", 0.0))
-        if self.x2 is not None and self.y2 is not None:
+        function = self.action.get("function")
+
+        if self.x2 is not None and self.y2 is not None and function != 'drag_to':
             if self.x1 is None or self.y1 is None:
                 logging.error(self.response)
                 return
@@ -120,8 +122,6 @@ class MouseAction(ActionStrategy):
         elif self.x1 is not None and self.y1 is not None:
             self.x = self.x1
             self.y = self.y1
-
-        function = self.action.get("function")
 
         if function in (
             "click",
@@ -695,7 +695,7 @@ def capture_screen_data(
             "y2": y2,
         }
         new_action_obj = models.Action(**new_action)
-        response = api.add_action(new_action=new_action_obj)
+        response = api_resources.storage.add_action(action=new_action_obj)
     else:
         """Update action with captured screen info"""
         updated_action = api.get_action(action_id=action_id)
@@ -706,8 +706,8 @@ def capture_screen_data(
         logging.debug(updated_action)
         updated_action["variables"] = variables
         updated_action_obj = models.Action(**updated_action)
-        response = api.update_action(
-            action_id=action_id, new_action=updated_action_obj
+        response = api_resources.storage.add_action(
+            action_id=action_id, action=updated_action_obj
         )
     return response
 
