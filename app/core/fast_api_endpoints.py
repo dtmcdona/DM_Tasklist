@@ -133,6 +133,19 @@ async def get_task(
     return api_resources.storage.get_task(task_id)
 
 
+@app.get("/load-task/{task_id}")
+async def load_task(task_id: str):
+    """Returns a list of actions by id"""
+    task = api_resources.storage.get_task(task_id)
+    actions = [
+        api_resources.storage.get_action(action_id)
+        for action_id in task.get("action_id_list")
+    ]
+    return {
+        "actions": actions,
+    }
+
+
 @app.post("/add-task")
 async def add_task(task: models.Task):
     """Adds a new task to api_resources.storage"""
