@@ -44,9 +44,3 @@ comment out or remove these from `app/core/process_controller.py`
    ```angular2html
    make local
    ```
-
-# Note:
-I created two PostgreSQL adapter files with credentials in settings.py. The adapters are not part of the back-end.
-If you would like to use the PostgreSQL adapters then you need to setup a PostgreDB that match settings.py and connect
-the adapters to the endpoints.
-Currently, there is no need for a database but in the future it might be useful.
