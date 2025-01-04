@@ -5,7 +5,7 @@ sequences and streams screen data to the React.js frontend project (DM_React)
 # Docker setup
 1. Docker compose up
    ```angular2html
-      make dcu
+      make init
    ```
 2. To use the pytest tests:
    ```angular2html
